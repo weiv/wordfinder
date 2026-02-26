@@ -5,8 +5,6 @@ import WordResults from './WordResults'
 const WORD_LEN = 5
 const NUM_ROWS = 6
 
-// Cell states cycling order
-const STATES = ['empty', 'green', 'yellow', 'gray']
 const NEXT_STATE = { empty: 'green', green: 'yellow', yellow: 'gray', gray: 'empty' }
 
 const STATE_CLASSES = {
