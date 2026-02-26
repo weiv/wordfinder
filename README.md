@@ -1,2 +1,2 @@
 # wordfinder
-Wordfinder
+Remix of Wordhippo for playing Wordle and Crossplay
