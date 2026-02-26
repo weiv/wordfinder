@@ -107,12 +107,16 @@ export default function LettersHelper() {
 
   return (
     <div>
-      <div className="flex justify-end mb-1">
+      <div className="flex justify-between items-center mb-1">
         <button
           onClick={() => setShowHelp(h => !h)}
           className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${showHelp ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}
           aria-label="Toggle help"
         >?</button>
+        <button
+          onClick={handleReset}
+          className="px-3 h-6 bg-gray-200 text-gray-500 text-xs font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
+        >Reset</button>
       </div>
       {showHelp && (
         <p className="text-sm text-gray-500 mb-4 text-center">
@@ -174,15 +178,6 @@ export default function LettersHelper() {
             ))}
           </div>
         </div>
-      </div>
-
-      <div className="flex justify-center mb-4">
-        <button
-          onClick={handleReset}
-          className="px-6 py-2.5 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 active:bg-gray-400 transition-colors"
-        >
-          Reset
-        </button>
       </div>
 
       {searched && (
