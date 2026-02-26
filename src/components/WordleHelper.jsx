@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { WORDS } from '../data/words'
 import WordResults from './WordResults'
 
@@ -27,6 +27,7 @@ export default function WordleHelper() {
   const [activeCell, setActiveCell] = useState({ row: 0, col: 0 })
   const [results, setResults] = useState([])
   const [searched, setSearched] = useState(false)
+  const containerRef = useRef(null)
 
   const updateCell = useCallback((row, col, updates) => {
     setGrid(prev => {
@@ -163,10 +164,12 @@ export default function WordleHelper() {
     setActiveCell({ row: 0, col: 0 })
     setResults([])
     setSearched(false)
+    containerRef.current?.focus()
   }, [])
 
   return (
     <div
+      ref={containerRef}
       className="outline-none"
       tabIndex={0}
       onKeyDown={handleKeyDown}

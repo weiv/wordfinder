@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { WORDS } from '../data/words'
 import WordResults from './WordResults'
 
@@ -8,6 +8,7 @@ export default function CrosswordHelper() {
   const [results, setResults] = useState([])
   const [searched, setSearched] = useState(false)
   const [error, setError] = useState('')
+  const patternRef = useRef(null)
 
   useEffect(() => {
     setError('')
@@ -48,6 +49,7 @@ export default function CrosswordHelper() {
     setResults([])
     setSearched(false)
     setError('')
+    patternRef.current?.focus()
   }
 
   const wordLen = pattern.trim().length
@@ -67,6 +69,7 @@ export default function CrosswordHelper() {
             Pattern
           </label>
           <input
+            ref={patternRef}
             type="text"
             value={pattern}
             onChange={e => setPattern(e.target.value)}

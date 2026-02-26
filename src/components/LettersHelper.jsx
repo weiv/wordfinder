@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { WORDS } from '../data/words'
 
 const SCORES = {
@@ -54,6 +54,7 @@ export default function LettersHelper() {
   const [position, setPosition] = useState(() => localStorage.getItem('position') || 'beginning')
   const [results, setResults] = useState([])
   const [searched, setSearched] = useState(false)
+  const lettersRef = useRef(null)
 
   const handleLettersChange = (val) => {
     const clean = val.replace(/[^a-zA-Z]/g, '').toUpperCase()
@@ -100,6 +101,7 @@ export default function LettersHelper() {
     localStorage.setItem('position', 'beginning')
     setResults([])
     setSearched(false)
+    lettersRef.current?.focus()
   }
 
   return (
@@ -115,6 +117,7 @@ export default function LettersHelper() {
             Your letters
           </label>
           <input
+            ref={lettersRef}
             type="text"
             value={letters}
             onChange={e => handleLettersChange(e.target.value)}
