@@ -137,6 +137,17 @@ export default function WordleHelper() {
     setSearched(true)
   }, [grid])
 
+  const handleVirtualKey = useCallback((l) => {
+    const { row, col } = activeCell
+    const currentCell = grid[row][col]
+    updateCell(row, col, {
+      letter: l,
+      state: currentCell.state === 'empty' ? 'green' : currentCell.state,
+    })
+    if (col < WORD_LEN - 1) setActiveCell({ row, col: col + 1 })
+    else if (row < NUM_ROWS - 1) setActiveCell({ row: row + 1, col: 0 })
+  }, [activeCell, grid, updateCell])
+
   const handleReset = useCallback(() => {
     setGrid(emptyGrid())
     setActiveCell({ row: 0, col: 0 })
@@ -184,79 +195,46 @@ export default function WordleHelper() {
         ))}
       </div>
 
-      {/* On-screen keyboard row for letters (mobile UX) */}
-      <div className="mb-4">
-        {'QWERTYUIOP'.split('').map(l => (
+      {/* On-screen keyboard (mobile UX) */}
+      <div className="flex flex-col gap-1 mb-4">
+        <div className="flex gap-1">
+          {'QWERTYUIOP'.split('').map(l => (
+            <button key={l} onClick={() => handleVirtualKey(l)}
+              className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+              {l}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1 px-[5%]">
+          {'ASDFGHJKL'.split('').map(l => (
+            <button key={l} onClick={() => handleVirtualKey(l)}
+              className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+              {l}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1">
           <button
-            key={l}
             onClick={() => {
               const { row, col } = activeCell
-              const currentCell = grid[row][col]
-              updateCell(row, col, {
-                letter: l,
-                state: currentCell.state === 'empty' ? 'green' : currentCell.state,
-              })
-              if (col < WORD_LEN - 1) setActiveCell({ row, col: col + 1 })
-              else if (row < NUM_ROWS - 1) setActiveCell({ row: row + 1, col: 0 })
+              if (grid[row][col].letter) {
+                updateCell(row, col, { letter: '', state: 'empty' })
+              } else if (col > 0) {
+                const prevCol = col - 1
+                updateCell(row, prevCol, { letter: '', state: 'empty' })
+                setActiveCell({ row, col: prevCol })
+              }
             }}
-            className="m-0.5 w-8 h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400"
-          >
-            {l}
+            className="flex-[1.5] h-10 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500">
+            ⌫
           </button>
-        ))}
-        <br />
-        {'ASDFGHJKL'.split('').map(l => (
-          <button
-            key={l}
-            onClick={() => {
-              const { row, col } = activeCell
-              const currentCell = grid[row][col]
-              updateCell(row, col, {
-                letter: l,
-                state: currentCell.state === 'empty' ? 'green' : currentCell.state,
-              })
-              if (col < WORD_LEN - 1) setActiveCell({ row, col: col + 1 })
-              else if (row < NUM_ROWS - 1) setActiveCell({ row: row + 1, col: 0 })
-            }}
-            className="m-0.5 w-8 h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400"
-          >
-            {l}
-          </button>
-        ))}
-        <br />
-        <button
-          onClick={() => {
-            const { row, col } = activeCell
-            if (grid[row][col].letter) {
-              updateCell(row, col, { letter: '', state: 'empty' })
-            } else if (col > 0) {
-              const prevCol = col - 1
-              updateCell(row, prevCol, { letter: '', state: 'empty' })
-              setActiveCell({ row, col: prevCol })
-            }
-          }}
-          className="m-0.5 px-2 h-9 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500"
-        >
-          ⌫
-        </button>
-        {'ZXCVBNM'.split('').map(l => (
-          <button
-            key={l}
-            onClick={() => {
-              const { row, col } = activeCell
-              const currentCell = grid[row][col]
-              updateCell(row, col, {
-                letter: l,
-                state: currentCell.state === 'empty' ? 'green' : currentCell.state,
-              })
-              if (col < WORD_LEN - 1) setActiveCell({ row, col: col + 1 })
-              else if (row < NUM_ROWS - 1) setActiveCell({ row: row + 1, col: 0 })
-            }}
-            className="m-0.5 w-8 h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400"
-          >
-            {l}
-          </button>
-        ))}
+          {'ZXCVBNM'.split('').map(l => (
+            <button key={l} onClick={() => handleVirtualKey(l)}
+              className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+              {l}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Action buttons */}
