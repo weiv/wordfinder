@@ -5,9 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev      # Start Vite dev server (hot reload)
-npm run build    # Production build to dist/
-npm run preview  # Preview the production build locally
+bun dev      # Start Vite dev server (hot reload)
+bun build    # Production build to dist/
+bun preview  # Preview the production build locally
 ```
 
 There is no test runner configured in this project.
