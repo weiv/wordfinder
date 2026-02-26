@@ -54,6 +54,7 @@ export default function LettersHelper() {
   const [position, setPosition] = useState(() => localStorage.getItem('position') || 'beginning')
   const [results, setResults] = useState([])
   const [searched, setSearched] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   const lettersRef = useRef(null)
 
   const handleLettersChange = (val) => {
@@ -106,10 +107,19 @@ export default function LettersHelper() {
 
   return (
     <div>
-      <p className="text-sm text-gray-500 mb-4 text-center">
-        Enter your available letters to find all words you can make,<br />
-        sorted by Scrabble score.
-      </p>
+      <div className="flex justify-end mb-1">
+        <button
+          onClick={() => setShowHelp(h => !h)}
+          className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${showHelp ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}
+          aria-label="Toggle help"
+        >?</button>
+      </div>
+      {showHelp && (
+        <p className="text-sm text-gray-500 mb-4 text-center">
+          Enter your available letters to find all words you can make,<br />
+          sorted by Scrabble score.
+        </p>
+      )}
 
       <div className="space-y-3 mb-4">
         <div>

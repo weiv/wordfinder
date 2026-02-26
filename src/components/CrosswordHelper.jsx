@@ -8,6 +8,7 @@ export default function CrosswordHelper() {
   const [results, setResults] = useState([])
   const [searched, setSearched] = useState(false)
   const [error, setError] = useState('')
+  const [showHelp, setShowHelp] = useState(false)
   const patternRef = useRef(null)
 
   useEffect(() => {
@@ -56,12 +57,21 @@ export default function CrosswordHelper() {
 
   return (
     <div>
-      <p className="text-sm text-gray-500 mb-4 text-center">
-        Use <code className="bg-gray-100 px-1 rounded font-mono">_</code> or{' '}
-        <code className="bg-gray-100 px-1 rounded font-mono">?</code> for unknown letters.
-        <br />
-        <span className="text-xs">Example: <strong>C_T</strong> → CAT, CUT, COT…</span>
-      </p>
+      <div className="flex justify-end mb-1">
+        <button
+          onClick={() => setShowHelp(h => !h)}
+          className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${showHelp ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}
+          aria-label="Toggle help"
+        >?</button>
+      </div>
+      {showHelp && (
+        <p className="text-sm text-gray-500 mb-4 text-center">
+          Use <code className="bg-gray-100 px-1 rounded font-mono">_</code> or{' '}
+          <code className="bg-gray-100 px-1 rounded font-mono">?</code> for unknown letters.
+          <br />
+          <span className="text-xs">Example: <strong>C_T</strong> → CAT, CUT, COT…</span>
+        </p>
+      )}
 
       <div className="space-y-3 mb-4">
         <div>

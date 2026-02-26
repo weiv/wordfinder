@@ -27,6 +27,7 @@ export default function WordleHelper() {
   const [activeCell, setActiveCell] = useState({ row: 0, col: 0 })
   const [results, setResults] = useState([])
   const [searched, setSearched] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   const containerRef = useRef(null)
 
   const updateCell = useCallback((row, col, updates) => {
@@ -174,14 +175,23 @@ export default function WordleHelper() {
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
-      <p className="text-sm text-gray-500 mb-3 text-center">
-        Tap a cell to enter a letter. Tap again to cycle color:<br />
-        <span className="inline-flex gap-2 mt-1 text-xs font-semibold">
-          <span className="px-2 py-0.5 rounded tile-green text-white">Green = correct</span>
-          <span className="px-2 py-0.5 rounded tile-yellow text-white">Yellow = wrong spot</span>
-          <span className="px-2 py-0.5 rounded tile-gray text-white">Gray = not in word</span>
-        </span>
-      </p>
+      <div className="flex justify-end mb-1">
+        <button
+          onClick={() => setShowHelp(h => !h)}
+          className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${showHelp ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}
+          aria-label="Toggle help"
+        >?</button>
+      </div>
+      {showHelp && (
+        <p className="text-sm text-gray-500 mb-3 text-center">
+          Tap a cell to enter a letter. Tap again to cycle color:<br />
+          <span className="inline-flex gap-2 mt-1 text-xs font-semibold">
+            <span className="px-2 py-0.5 rounded tile-green text-white">Green = correct</span>
+            <span className="px-2 py-0.5 rounded tile-yellow text-white">Yellow = wrong spot</span>
+            <span className="px-2 py-0.5 rounded tile-gray text-white">Gray = not in word</span>
+          </span>
+        </p>
+      )}
 
       {/* Grid */}
       <div className="flex flex-col gap-1.5 mb-4">
