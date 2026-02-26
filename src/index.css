@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900;
+    -webkit-tap-highlight-color: transparent;
+    font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+  }
+}
+
+@layer utilities {
+  .tile-green  { background-color: #6aaa64; }
+  .tile-yellow { background-color: #c9b458; }
+  .tile-gray   { background-color: #787c7e; }
+  .tile-empty  { background-color: #ffffff; border: 2px solid #d3d6da; }
+}
