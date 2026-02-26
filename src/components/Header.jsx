@@ -26,6 +26,16 @@ export default function Header({ mode, onModeChange }) {
           >
             Crossword Helper
           </button>
+          <button
+            onClick={() => onModeChange('letters')}
+            className={`flex-1 py-2 text-sm font-semibold transition-colors border-l border-gray-300 ${
+              mode === 'letters'
+                ? 'bg-wordle-green text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            Letters
+          </button>
         </div>
       </div>
     </header>
