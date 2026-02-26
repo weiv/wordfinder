@@ -158,6 +158,10 @@ export default function WordleHelper() {
     handleSearch()
   }, [grid, handleSearch])
 
+  useEffect(() => {
+    containerRef.current?.focus()
+  }, [])
+
   const handleReset = useCallback(() => {
     setGrid(emptyGrid())
     setActiveCell({ row: 0, col: 0 })

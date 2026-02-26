@@ -132,6 +132,7 @@ export default function LettersHelper() {
           </label>
           <input
             ref={lettersRef}
+            autoFocus
             type="text"
             value={letters}
             onChange={e => handleLettersChange(e.target.value)}

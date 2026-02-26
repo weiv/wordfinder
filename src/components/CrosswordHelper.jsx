@@ -84,6 +84,7 @@ export default function CrosswordHelper() {
           </label>
           <input
             ref={patternRef}
+            autoFocus
             type="text"
             value={pattern}
             onChange={e => setPattern(e.target.value)}
