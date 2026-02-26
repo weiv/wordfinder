@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { WORDS } from '../data/words'
 import WordResults from './WordResults'
 
@@ -9,15 +9,15 @@ export default function CrosswordHelper() {
   const [searched, setSearched] = useState(false)
   const [error, setError] = useState('')
 
-  const handleSearch = () => {
+  useEffect(() => {
     setError('')
     const raw = pattern.trim().toUpperCase()
     if (!raw) {
-      setError('Please enter a pattern (e.g. C_T or _IGHT)')
+      setResults([])
+      setSearched(false)
       return
     }
 
-    // Build regex: replace _ and ? with .
     const regexStr = '^' + raw.replace(/[_?]/g, '.') + '$'
     let regex
     try {
@@ -40,7 +40,7 @@ export default function CrosswordHelper() {
 
     setResults(matched)
     setSearched(true)
-  }
+  }, [pattern, mustInclude])
 
   const handleReset = () => {
     setPattern('')
@@ -69,11 +69,7 @@ export default function CrosswordHelper() {
           <input
             type="text"
             value={pattern}
-            onChange={e => {
-              setPattern(e.target.value)
-              setSearched(false)
-            }}
-            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+            onChange={e => setPattern(e.target.value)}
             placeholder="e.g. _IGHT or C_OWN"
             className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg font-mono uppercase tracking-widest focus:outline-none focus:border-wordle-green"
             autoCapitalize="characters"
@@ -93,11 +89,7 @@ export default function CrosswordHelper() {
           <input
             type="text"
             value={mustInclude}
-            onChange={e => {
-              setMustInclude(e.target.value)
-              setSearched(false)
-            }}
-            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+            onChange={e => setMustInclude(e.target.value)}
             placeholder="e.g. AE"
             className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg font-mono uppercase tracking-widest focus:outline-none focus:border-wordle-green"
             autoCapitalize="characters"
@@ -112,13 +104,7 @@ export default function CrosswordHelper() {
         <p className="text-red-500 text-sm mb-3">{error}</p>
       )}
 
-      <div className="flex gap-3 justify-center mb-2">
-        <button
-          onClick={handleSearch}
-          className="px-6 py-2.5 bg-wordle-green text-white font-bold rounded-lg shadow hover:opacity-90 active:opacity-80 transition-opacity"
-        >
-          Find Words
-        </button>
+      <div className="flex justify-center mb-2">
         <button
           onClick={handleReset}
           className="px-6 py-2.5 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 active:bg-gray-400 transition-colors"

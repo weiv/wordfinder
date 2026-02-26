@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { WORDS } from '../data/words'
 import WordResults from './WordResults'
 
@@ -148,6 +148,16 @@ export default function WordleHelper() {
     else if (row < NUM_ROWS - 1) setActiveCell({ row: row + 1, col: 0 })
   }, [activeCell, grid, updateCell])
 
+  useEffect(() => {
+    const hasAnyLetter = grid.some(row => row.some(cell => cell.letter))
+    if (!hasAnyLetter) {
+      setResults([])
+      setSearched(false)
+      return
+    }
+    handleSearch()
+  }, [grid, handleSearch])
+
   const handleReset = useCallback(() => {
     setGrid(emptyGrid())
     setActiveCell({ row: 0, col: 0 })
@@ -238,13 +248,7 @@ export default function WordleHelper() {
       </div>
 
       {/* Action buttons */}
-      <div className="flex gap-3 justify-center mb-2">
-        <button
-          onClick={handleSearch}
-          className="px-6 py-2.5 bg-wordle-green text-white font-bold rounded-lg shadow hover:opacity-90 active:opacity-80 transition-opacity"
-        >
-          Find Words
-        </button>
+      <div className="flex justify-center mb-2">
         <button
           onClick={handleReset}
           className="px-6 py-2.5 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 active:bg-gray-400 transition-colors"

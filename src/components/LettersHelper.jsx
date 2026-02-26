@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { WORDS } from '../data/words'
 
 const SCORES = {
@@ -59,23 +59,25 @@ export default function LettersHelper() {
     const clean = val.replace(/[^a-zA-Z]/g, '').toUpperCase()
     setLetters(clean)
     localStorage.setItem('letters', clean)
-    setSearched(false)
   }
 
   const handlePosLettersChange = (val) => {
     const clean = val.replace(/[^a-zA-Z]/g, '').toUpperCase()
     setPosLetters(clean)
     localStorage.setItem('posLetters', clean)
-    setSearched(false)
   }
 
   const handlePositionChange = (pos) => {
     setPosition(pos)
     localStorage.setItem('position', pos)
-    setSearched(false)
   }
 
-  const handleSearch = () => {
+  useEffect(() => {
+    if (!letters) {
+      setResults([])
+      setSearched(false)
+      return
+    }
     const available = letters.split('')
     const sub = posLetters
     const matched = WORDS
@@ -87,7 +89,7 @@ export default function LettersHelper() {
       .sort((a, b) => b.score - a.score || a.word.localeCompare(b.word))
     setResults(matched)
     setSearched(true)
-  }
+  }, [letters, posLetters, position])
 
   const handleReset = () => {
     setLetters('')
@@ -116,7 +118,6 @@ export default function LettersHelper() {
             type="text"
             value={letters}
             onChange={e => handleLettersChange(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSearch()}
             placeholder="e.g. DEROIBU"
             className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg font-mono uppercase tracking-widest focus:outline-none focus:border-wordle-green"
             autoCapitalize="characters"
@@ -137,7 +138,6 @@ export default function LettersHelper() {
             type="text"
             value={posLetters}
             onChange={e => handlePosLettersChange(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSearch()}
             placeholder="e.g. D"
             className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg font-mono uppercase tracking-widest focus:outline-none focus:border-wordle-green mb-2"
             autoCapitalize="characters"
@@ -163,13 +163,7 @@ export default function LettersHelper() {
         </div>
       </div>
 
-      <div className="flex gap-3 justify-center mb-4">
-        <button
-          onClick={handleSearch}
-          className="px-6 py-2.5 bg-wordle-green text-white font-bold rounded-lg shadow hover:opacity-90 active:opacity-80 transition-opacity"
-        >
-          Find Words
-        </button>
+      <div className="flex justify-center mb-4">
         <button
           onClick={handleReset}
           className="px-6 py-2.5 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 active:bg-gray-400 transition-colors"
