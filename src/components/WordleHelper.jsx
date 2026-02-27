@@ -21,12 +21,20 @@ function emptyGrid() {
 }
 
 export default function WordleHelper() {
-  const [grid, setGrid] = useState(emptyGrid())
+  const [grid, setGrid] = useState(() => {
+    try {
+      const saved = localStorage.getItem('wordleGrid')
+      return saved ? JSON.parse(saved) : emptyGrid()
+    } catch {
+      return emptyGrid()
+    }
+  })
   const [activeCell, setActiveCell] = useState({ row: 0, col: 0 })
   const [results, setResults] = useState([])
   const [searched, setSearched] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const containerRef = useRef(null)
+  const rowRefs = useRef([])
 
   const updateCell = useCallback((row, col, updates) => {
     setGrid(prev => {
@@ -149,6 +157,10 @@ export default function WordleHelper() {
   }, [activeCell, grid, updateCell])
 
   useEffect(() => {
+    localStorage.setItem('wordleGrid', JSON.stringify(grid))
+  }, [grid])
+
+  useEffect(() => {
     const hasAnyLetter = grid.some(row => row.some(cell => cell.letter))
     if (!hasAnyLetter) {
       setResults([])
@@ -162,8 +174,14 @@ export default function WordleHelper() {
     containerRef.current?.focus()
   }, [])
 
+  useEffect(() => {
+    rowRefs.current[activeCell.row]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [activeCell.row])
+
   const handleReset = useCallback(() => {
-    setGrid(emptyGrid())
+    const empty = emptyGrid()
+    setGrid(empty)
+    localStorage.setItem('wordleGrid', JSON.stringify(empty))
     setActiveCell({ row: 0, col: 0 })
     setResults([])
     setSearched(false)
@@ -199,75 +217,83 @@ export default function WordleHelper() {
         </p>
       )}
 
-      {/* Grid */}
-      <div className="flex flex-col gap-1.5 mb-4">
-        {grid.map((row, ri) => (
-          <div key={ri} className="flex gap-1.5 justify-center">
-            {row.map((cell, ci) => {
-              const isActive = activeCell.row === ri && activeCell.col === ci
-              return (
-                <button
-                  key={ci}
-                  onClick={() => handleCellClick(ri, ci)}
-                  className={`
-                    w-12 h-12 sm:w-14 sm:h-14 rounded text-lg font-bold uppercase
-                    border-2 transition-all select-none
-                    ${STATE_CLASSES[cell.state]}
-                    ${isActive ? 'ring-2 ring-offset-1 ring-blue-400' : ''}
-                  `}
-                >
-                  {cell.letter}
-                </button>
-              )
-            })}
-          </div>
-        ))}
-      </div>
-
-      {/* On-screen keyboard (mobile UX) */}
-      <div className="flex flex-col gap-1 mb-4">
-        <div className="flex gap-1">
-          {'QWERTYUIOP'.split('').map(l => (
-            <button key={l} onClick={() => handleVirtualKey(l)}
-              className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
-              {l}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-1 px-[5%]">
-          {'ASDFGHJKL'.split('').map(l => (
-            <button key={l} onClick={() => handleVirtualKey(l)}
-              className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
-              {l}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-1">
-          <button
-            onClick={() => {
-              const { row, col } = activeCell
-              if (grid[row][col].letter) {
-                updateCell(row, col, { letter: '', state: 'empty' })
-              } else if (col > 0) {
-                const prevCol = col - 1
-                updateCell(row, prevCol, { letter: '', state: 'empty' })
-                setActiveCell({ row, col: prevCol })
-              }
-            }}
-            className="flex-[1.5] h-10 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500">
-            ⌫
-          </button>
-          {'ZXCVBNM'.split('').map(l => (
-            <button key={l} onClick={() => handleVirtualKey(l)}
-              className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
-              {l}
-            </button>
-          ))}
-        </div>
-      </div>
-
-
       <WordResults words={results} searched={searched} />
+
+      {/* Fixed bottom panel: tiles + keyboard — kept inside container div so onKeyDown still bubbles */}
+      <div className="fixed bottom-14 left-0 right-0 bg-white border-t border-gray-200 z-10 h-[calc(60vh-3.5rem)]">
+        <div className="max-w-lg mx-auto px-4 h-full flex flex-col">
+
+          {/* Scrollable tile rows — fills remaining space above keyboard */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="flex flex-col gap-1.5 py-1.5">
+              {grid.map((row, ri) => (
+                <div key={ri} ref={el => rowRefs.current[ri] = el} className="flex gap-1.5 justify-center">
+                  {row.map((cell, ci) => {
+                    const isActive = activeCell.row === ri && activeCell.col === ci
+                    return (
+                      <button
+                        key={ci}
+                        onClick={() => handleCellClick(ri, ci)}
+                        className={`
+                          w-12 h-12 sm:w-14 sm:h-14 rounded text-lg font-bold uppercase
+                          border-2 transition-all select-none
+                          ${STATE_CLASSES[cell.state]}
+                          ${isActive ? 'ring-2 ring-offset-1 ring-blue-400' : ''}
+                        `}
+                      >
+                        {cell.letter}
+                      </button>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Keyboard */}
+          <div className="flex flex-col gap-1 py-2 border-t border-gray-100">
+            <div className="flex gap-1">
+              {'QWERTYUIOP'.split('').map(l => (
+                <button key={l} onClick={() => handleVirtualKey(l)}
+                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+                  {l}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1 px-[5%]">
+              {'ASDFGHJKL'.split('').map(l => (
+                <button key={l} onClick={() => handleVirtualKey(l)}
+                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+                  {l}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1">
+              <button
+                onClick={() => {
+                  const { row, col } = activeCell
+                  if (grid[row][col].letter) {
+                    updateCell(row, col, { letter: '', state: 'empty' })
+                  } else if (col > 0) {
+                    const prevCol = col - 1
+                    updateCell(row, prevCol, { letter: '', state: 'empty' })
+                    setActiveCell({ row, col: prevCol })
+                  }
+                }}
+                className="flex-[1.5] h-10 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500">
+                ⌫
+              </button>
+              {'ZXCVBNM'.split('').map(l => (
+                <button key={l} onClick={() => handleVirtualKey(l)}
+                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </div>
     </div>
   )
 }

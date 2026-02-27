@@ -12,14 +12,14 @@ export default function App() {
   }
 
   const tabs = [
-    { key: 'wordle', label: 'Wordle Helper' },
+    { key: 'wordle', label: 'Wordle' },
     { key: 'crossword', label: 'Crossword' },
     { key: 'letters', label: 'Letters' },
   ]
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <main className="flex-1 overflow-y-auto pb-14">
+      <main className={`flex-1 overflow-y-auto ${mode === 'wordle' ? 'pb-[60vh]' : 'pb-14'}`}>
         <div className="max-w-lg mx-auto px-4 py-4">
           {mode === 'wordle' && <WordleHelper />}
           {mode === 'crossword' && <CrosswordHelper />}
