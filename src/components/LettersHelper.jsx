@@ -16,13 +16,23 @@ function scrabbleScore(word) {
 }
 
 function canForm(word, available) {
-  const counts = {}
-  for (const l of available) counts[l] = (counts[l] || 0) + 1
-  for (const l of word) {
-    if (!counts[l]) return false
-    counts[l]--
+  const avail = {}
+  for (const c of available) {
+    if (c === '.') avail['_'] = (avail['_'] || 0) + 1
+    else avail[c] = (avail[c] || 0) + 1
   }
-  return true
+  const blanksCover = []
+  for (const c of word) {
+    if (avail[c] > 0) {
+      avail[c]--
+    } else if (avail['_'] > 0) {
+      avail['_']--
+      blanksCover.push(c)
+    } else {
+      return null
+    }
+  }
+  return blanksCover
 }
 
 // Returns the part of word that must come from available letters after
@@ -58,7 +68,7 @@ export default function LettersHelper() {
   const lettersRef = useRef(null)
 
   const handleLettersChange = (val) => {
-    const clean = val.replace(/[^a-zA-Z]/g, '').toUpperCase()
+    const clean = val.replace(/[^a-zA-Z.]/g, '').toUpperCase()
     setLetters(clean)
     localStorage.setItem('letters', clean)
   }
@@ -83,11 +93,14 @@ export default function LettersHelper() {
     const available = letters.split('')
     const sub = posLetters
     const matched = WORDS
-      .filter(w => {
+      .flatMap(w => {
         const remainder = getRemainder(w, sub, position)
-        return remainder !== null && canForm(remainder, available)
+        if (remainder === null) return []
+        const blanksCover = canForm(remainder, available)
+        if (blanksCover === null) return []
+        const blankDeduction = blanksCover.reduce((sum, l) => sum + (SCORES[l] || 0), 0)
+        return [{ word: w, score: scrabbleScore(w) - blankDeduction, blanksCover }]
       })
-      .map(w => ({ word: w, score: scrabbleScore(w) }))
       .sort((a, b) => b.score - a.score || a.word.localeCompare(b.word))
     setResults(matched)
     setSearched(true)
@@ -121,7 +134,7 @@ export default function LettersHelper() {
       {showHelp && (
         <p className="text-sm text-gray-500 mb-4 text-center">
           Enter your available letters to find all words you can make,<br />
-          sorted by Scrabble score.
+          sorted by Scrabble score. Use . for a blank tile (any letter, worth 0).
         </p>
       )}
 
@@ -143,9 +156,16 @@ export default function LettersHelper() {
             autoComplete="off"
             spellCheck="false"
           />
-          {letters.length > 0 && (
-            <p className="text-xs text-gray-400 mt-1">{letters.length} letter{letters.length !== 1 ? 's' : ''}</p>
-          )}
+          {letters.length > 0 && (() => {
+            const letterCount = letters.replace(/\./g, '').length
+            const blankCount = (letters.match(/\./g) || []).length
+            const display = letterCount > 0 && blankCount > 0
+              ? `${letterCount} letter${letterCount !== 1 ? 's' : ''} + ${blankCount} blank${blankCount !== 1 ? 's' : ''}`
+              : blankCount > 0
+              ? `${blankCount} blank${blankCount !== 1 ? 's' : ''}`
+              : `${letterCount} letter${letterCount !== 1 ? 's' : ''}`
+            return <p className="text-xs text-gray-400 mt-1">{display}</p>
+          })()}
         </div>
 
         <div>
@@ -190,19 +210,29 @@ export default function LettersHelper() {
           </p>
           {results.length > 0 && (
             <div className="flex flex-wrap gap-2 max-h-96 overflow-y-auto pr-1">
-              {results.map(({ word, score }) => (
-                <div
-                  key={word}
-                  className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-300 rounded-md shadow-sm"
-                >
-                  <span className="text-sm font-mono font-semibold text-gray-800 tracking-wider uppercase">
-                    {word}
-                  </span>
-                  <span className="text-xs font-bold text-wordle-green">
-                    {score}
-                  </span>
-                </div>
-              ))}
+              {results.map(({ word, score, blanksCover }) => {
+                const blanksLeft = {}
+                for (const l of blanksCover) blanksLeft[l] = (blanksLeft[l] || 0) + 1
+                return (
+                  <div
+                    key={word}
+                    className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-300 rounded-md shadow-sm"
+                  >
+                    <span className="text-sm font-mono font-semibold tracking-wider uppercase">
+                      {word.split('').map((c, i) => {
+                        if (blanksLeft[c] > 0) {
+                          blanksLeft[c]--
+                          return <span key={i} className="text-gray-400">{c}</span>
+                        }
+                        return <span key={i} className="text-gray-800">{c}</span>
+                      })}
+                    </span>
+                    <span className="text-xs font-bold text-wordle-green">
+                      {score}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
