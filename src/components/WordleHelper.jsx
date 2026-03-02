@@ -195,17 +195,21 @@ export default function WordleHelper() {
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
-      <div className="sticky top-0 z-10 bg-gray-50 flex justify-between items-center py-1 mb-1">
-        <button
-          onClick={() => setShowHelp(h => !h)}
-          className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${showHelp ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}
-          aria-label="Toggle help"
-        >?</button>
-        <button
-          onClick={handleReset}
-          className="px-3 h-6 bg-gray-200 text-gray-500 text-xs font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
-        >Reset</button>
+      {/* Fixed top bar */}
+      <div className="fixed top-0 left-0 right-0 z-20 bg-white border-b border-gray-200">
+        <div className="max-w-lg mx-auto px-4 py-1 flex justify-between items-center">
+          <button
+            onClick={() => setShowHelp(h => !h)}
+            className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${showHelp ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}
+            aria-label="Toggle help"
+          >?</button>
+          <button
+            onClick={handleReset}
+            className="px-3 h-6 bg-gray-200 text-gray-500 text-xs font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
+          >Reset</button>
+        </div>
       </div>
+      <div className="h-8" />{/* spacer for fixed bar */}
       {showHelp && (
         <p className="text-sm text-gray-500 mb-3 text-center">
           Tap a cell to enter a letter. Tap again to cycle color:<br />
