@@ -57,17 +57,20 @@ export default function CrosswordHelper() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-1">
-        <button
-          onClick={() => setShowHelp(h => !h)}
-          className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${showHelp ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}
-          aria-label="Toggle help"
-        >?</button>
-        <button
-          onClick={handleReset}
-          className="px-3 h-6 bg-gray-200 text-gray-500 text-xs font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
-        >Reset</button>
+      <div className="fixed top-0 left-0 right-0 z-20 bg-white border-b border-gray-200">
+        <div className="max-w-lg mx-auto px-4 py-1 flex justify-between items-center">
+          <button
+            onClick={() => setShowHelp(h => !h)}
+            className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${showHelp ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}
+            aria-label="Toggle help"
+          >?</button>
+          <button
+            onClick={handleReset}
+            className="px-3 h-6 bg-gray-200 text-gray-500 text-xs font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
+          >Reset</button>
+        </div>
       </div>
+      <div className="h-8" />
       {showHelp && (
         <p className="text-sm text-gray-500 mb-4 text-center">
           Use <code className="bg-gray-100 px-1 rounded font-mono">_</code> or{' '}
