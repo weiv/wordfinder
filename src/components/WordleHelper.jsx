@@ -195,7 +195,7 @@ export default function WordleHelper() {
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
-      <div className="flex justify-between items-center mb-1">
+      <div className="sticky top-0 z-10 bg-gray-50 flex justify-between items-center py-1 mb-1">
         <button
           onClick={() => setShowHelp(h => !h)}
           className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${showHelp ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}

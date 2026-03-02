@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 bun dev      # Start Vite dev server (hot reload)
-bun build    # Production build to dist/
+bun run build    # Production build to dist/
 bun preview  # Preview the production build locally
 ```
 
