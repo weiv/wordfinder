@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { WORDS } from '../data/words'
 
 const SCORES = {
@@ -58,6 +58,34 @@ function matchPattern(word, patternCore, anchorStart, anchorEnd, available) {
   return null
 }
 
+// variant: 'prominent' (saved section) | 'saved' (result, in saved) | 'normal' (result, not saved)
+function WordCard({ word, score, blanksCover, variant, onClick }) {
+  const blanksLeft = {}
+  for (const l of blanksCover) blanksLeft[l] = (blanksLeft[l] || 0) + 1
+  const prominent = variant === 'prominent'
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 px-3 py-1 rounded-md shadow-sm border transition-colors ${
+        prominent ? 'bg-wordle-green border-wordle-green' :
+        variant === 'saved' ? 'bg-green-50 border-wordle-green' :
+        'bg-white border-gray-300 hover:border-wordle-green'
+      }`}
+    >
+      <span className={`text-sm font-mono font-semibold tracking-wider uppercase${prominent ? ' text-white' : ''}`}>
+        {word.split('').map((c, i) => {
+          if (blanksLeft[c] > 0) {
+            blanksLeft[c]--
+            return <span key={i} className={prominent ? 'text-green-200' : 'text-gray-400'}>{c}</span>
+          }
+          return <span key={i} className={prominent ? '' : 'text-gray-800'}>{c}</span>
+        })}
+      </span>
+      <span className={`text-xs font-bold ${prominent ? 'text-green-200' : 'text-wordle-green'}`}>{score}</span>
+    </button>
+  )
+}
+
 export default function LettersHelper() {
   const [letters, setLetters] = useState(() => localStorage.getItem('letters') || '')
   const [posLetters, setPosLetters] = useState(() => localStorage.getItem('posLetters') || '')
@@ -65,6 +93,7 @@ export default function LettersHelper() {
   const [searched, setSearched] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [saved, setSaved] = useState(() => JSON.parse(localStorage.getItem('savedWords') || '[]'))
+  const savedSet = useMemo(() => new Set(saved.map(s => s.word)), [saved])
   const lettersRef = useRef(null)
 
   const handleLettersChange = (val) => {
@@ -207,28 +236,10 @@ export default function LettersHelper() {
         <div className="mb-4">
           <p className="text-sm font-semibold text-gray-700 mb-2">Saved</p>
           <div className="flex flex-wrap gap-2">
-            {saved.map(({ word, score, blanksCover }) => {
-              const blanksLeft = {}
-              for (const l of blanksCover) blanksLeft[l] = (blanksLeft[l] || 0) + 1
-              return (
-                <button
-                  key={word}
-                  onClick={() => toggleSaved({ word, score, blanksCover })}
-                  className="flex items-center gap-1 px-3 py-1 bg-wordle-green border border-wordle-green rounded-md shadow-sm"
-                >
-                  <span className="text-sm font-mono font-semibold tracking-wider uppercase text-white">
-                    {word.split('').map((c, i) => {
-                      if (blanksLeft[c] > 0) {
-                        blanksLeft[c]--
-                        return <span key={i} className="text-green-200">{c}</span>
-                      }
-                      return <span key={i}>{c}</span>
-                    })}
-                  </span>
-                  <span className="text-xs font-bold text-green-200">{score}</span>
-                </button>
-              )
-            })}
+            {saved.map(({ word, score, blanksCover }) => (
+              <WordCard key={word} word={word} score={score} blanksCover={blanksCover}
+                variant="prominent" onClick={() => toggleSaved({ word, score, blanksCover })} />
+            ))}
           </div>
         </div>
       )}
@@ -242,33 +253,11 @@ export default function LettersHelper() {
           </p>
           {results.length > 0 && (
             <div className="flex flex-wrap gap-2 max-h-96 overflow-y-auto pr-1">
-              {results.map(({ word, score, blanksCover }) => {
-                const isSaved = saved.some(s => s.word === word)
-                const blanksLeft = {}
-                for (const l of blanksCover) blanksLeft[l] = (blanksLeft[l] || 0) + 1
-                return (
-                  <button
-                    key={word}
-                    onClick={() => toggleSaved({ word, score, blanksCover })}
-                    className={`flex items-center gap-1 px-3 py-1 rounded-md shadow-sm border transition-colors ${
-                      isSaved
-                        ? 'bg-green-50 border-wordle-green'
-                        : 'bg-white border-gray-300 hover:border-wordle-green'
-                    }`}
-                  >
-                    <span className="text-sm font-mono font-semibold tracking-wider uppercase">
-                      {word.split('').map((c, i) => {
-                        if (blanksLeft[c] > 0) {
-                          blanksLeft[c]--
-                          return <span key={i} className="text-gray-400">{c}</span>
-                        }
-                        return <span key={i} className="text-gray-800">{c}</span>
-                      })}
-                    </span>
-                    <span className="text-xs font-bold text-wordle-green">{score}</span>
-                  </button>
-                )
-              })}
+              {results.map(({ word, score, blanksCover }) => (
+                <WordCard key={word} word={word} score={score} blanksCover={blanksCover}
+                  variant={savedSet.has(word) ? 'saved' : 'normal'}
+                  onClick={() => toggleSaved({ word, score, blanksCover })} />
+              ))}
             </div>
           )}
         </div>
