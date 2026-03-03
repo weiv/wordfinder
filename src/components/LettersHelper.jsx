@@ -35,36 +35,36 @@ function canForm(word, available) {
   return blanksCover
 }
 
-// Returns the part of word that must come from available letters after
-// removing the fixed sub at the given position, or null if it doesn't match.
-function getRemainder(word, sub, position) {
-  if (!sub) return word
-  if (position === 'beginning') {
-    if (!word.startsWith(sub)) return null
-    return word.slice(sub.length)
-  }
-  if (position === 'end') {
-    if (!word.endsWith(sub)) return null
-    return word.slice(0, word.length - sub.length)
-  }
-  // middle: sub appears somewhere not at start or end
-  for (let i = 1; i <= word.length - sub.length - 1; i++) {
-    if (word.slice(i, i + sub.length) === sub) {
-      return word.slice(0, i) + word.slice(i + sub.length)
+function matchPattern(word, patternCore, anchorStart, anchorEnd, available) {
+  const pLen = patternCore.length
+  const wLen = word.length
+  if (pLen > wLen) return null
+  for (let start = 0; start <= wLen - pLen; start++) {
+    if (anchorStart && start !== 0) continue
+    if (anchorEnd && start !== wLen - pLen) continue
+    let mismatch = false
+    const pool = []
+    for (let i = 0; i < pLen; i++) {
+      const pc = patternCore[i], wc = word[start + i]
+      if (pc === '.') pool.push(wc)
+      else if (pc !== wc) { mismatch = true; break }
     }
+    if (mismatch) continue
+    for (let i = 0; i < start; i++) pool.push(word[i])
+    for (let i = start + pLen; i < wLen; i++) pool.push(word[i])
+    const result = canForm(pool.join(''), available)
+    if (result !== null) return result
   }
   return null
 }
 
-const POSITIONS = ['beginning', 'middle', 'end']
-
 export default function LettersHelper() {
   const [letters, setLetters] = useState(() => localStorage.getItem('letters') || '')
   const [posLetters, setPosLetters] = useState(() => localStorage.getItem('posLetters') || '')
-  const [position, setPosition] = useState(() => localStorage.getItem('position') || 'beginning')
   const [results, setResults] = useState([])
   const [searched, setSearched] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [saved, setSaved] = useState(() => JSON.parse(localStorage.getItem('savedWords') || '[]'))
   const lettersRef = useRef(null)
 
   const handleLettersChange = (val) => {
@@ -74,14 +74,9 @@ export default function LettersHelper() {
   }
 
   const handlePosLettersChange = (val) => {
-    const clean = val.replace(/[^a-zA-Z]/g, '').toUpperCase()
+    const clean = val.replace(/[^a-zA-Z.^$#@!]/g, '').toUpperCase()
     setPosLetters(clean)
     localStorage.setItem('posLetters', clean)
-  }
-
-  const handlePositionChange = (pos) => {
-    setPosition(pos)
-    localStorage.setItem('position', pos)
   }
 
   useEffect(() => {
@@ -91,12 +86,14 @@ export default function LettersHelper() {
       return
     }
     const available = letters.split('')
-    const sub = posLetters
+    const anchorStart = /^[\^#@]/.test(posLetters)
+    const anchorEnd = /[$!]$/.test(posLetters)
+    const patternCore = posLetters.replace(/^[\^#@]/, '').replace(/[$!]$/, '')
     const matched = WORDS
       .flatMap(w => {
-        const remainder = getRemainder(w, sub, position)
-        if (remainder === null) return []
-        const blanksCover = canForm(remainder, available)
+        const blanksCover = patternCore
+          ? matchPattern(w, patternCore, anchorStart, anchorEnd, available)
+          : canForm(w, available)
         if (blanksCover === null) return []
         const blankDeduction = blanksCover.reduce((sum, l) => sum + (SCORES[l] || 0), 0)
         return [{ word: w, score: scrabbleScore(w) - blankDeduction, blanksCover }]
@@ -104,15 +101,25 @@ export default function LettersHelper() {
       .sort((a, b) => b.score - a.score || a.word.localeCompare(b.word))
     setResults(matched)
     setSearched(true)
-  }, [letters, posLetters, position])
+  }, [letters, posLetters])
+
+  const toggleSaved = (wordObj) => {
+    setSaved(prev => {
+      const next = prev.some(s => s.word === wordObj.word)
+        ? prev.filter(s => s.word !== wordObj.word)
+        : [...prev, wordObj]
+      localStorage.setItem('savedWords', JSON.stringify(next))
+      return next
+    })
+  }
 
   const handleReset = () => {
     setLetters('')
     setPosLetters('')
-    setPosition('beginning')
     localStorage.setItem('letters', '')
     localStorage.setItem('posLetters', '')
-    localStorage.setItem('position', 'beginning')
+    setSaved([])
+    localStorage.setItem('savedWords', '[]')
     setResults([])
     setSearched(false)
     lettersRef.current?.focus()
@@ -135,10 +142,17 @@ export default function LettersHelper() {
       </div>
       <div className="h-8" />
       {showHelp && (
-        <p className="text-sm text-gray-500 mb-4 text-center">
-          Enter your available letters to find all words you can make,<br />
-          sorted by Scrabble score. Use . for a blank tile (any letter, worth 0).
-        </p>
+        <div className="text-sm text-gray-500 mb-4 space-y-1">
+          <p>Enter available letters to find all makeable words, sorted by Scrabble score. Use <code className="bg-gray-100 px-1 rounded font-mono">.</code> in Your letters for a blank tile.</p>
+          <p className="mt-1 font-semibold text-gray-600">Fixed pattern syntax:</p>
+          <ul className="text-xs space-y-0.5 list-disc list-inside">
+            <li><code className="bg-gray-100 px-1 rounded font-mono">A</code> — word contains A; rest from your letters</li>
+            <li><code className="bg-gray-100 px-1 rounded font-mono">^A</code> — word starts with A</li>
+            <li><code className="bg-gray-100 px-1 rounded font-mono">A$</code> — word ends with A</li>
+            <li><code className="bg-gray-100 px-1 rounded font-mono">.</code> in pattern — uses one letter from your pool</li>
+            <li><code className="bg-gray-100 px-1 rounded font-mono">A.B</code> — A, one pool letter, B (anywhere unless anchored)</li>
+          </ul>
+        </div>
       )}
 
       <div className="space-y-3 mb-4">
@@ -173,36 +187,51 @@ export default function LettersHelper() {
 
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1">
-            Fixed letters at <span className="font-normal text-gray-400">(optional)</span>
+            Fixed pattern <span className="font-normal text-gray-400">(optional)</span>
           </label>
           <input
             type="text"
             value={posLetters}
             onChange={e => handlePosLettersChange(e.target.value)}
-            placeholder="e.g. D"
-            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg font-mono uppercase tracking-widest focus:outline-none focus:border-wordle-green mb-2"
+            placeholder="e.g. ^A or A.B or ER$"
+            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg font-mono uppercase tracking-widest focus:outline-none focus:border-wordle-green"
             autoCapitalize="characters"
             autoCorrect="off"
             autoComplete="off"
             spellCheck="false"
           />
-          <div className="flex rounded-lg overflow-hidden border border-gray-300 text-sm font-semibold">
-            {POSITIONS.map((pos, i) => (
-              <button
-                key={pos}
-                onClick={() => handlePositionChange(pos)}
-                className={`flex-1 py-2 capitalize transition-colors ${
-                  position === pos
-                    ? 'bg-wordle-green text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                } ${i > 0 ? 'border-l border-gray-300' : ''}`}
-              >
-                {pos}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
+
+      {saved.length > 0 && (
+        <div className="mb-4">
+          <p className="text-sm font-semibold text-gray-700 mb-2">Saved</p>
+          <div className="flex flex-wrap gap-2">
+            {saved.map(({ word, score, blanksCover }) => {
+              const blanksLeft = {}
+              for (const l of blanksCover) blanksLeft[l] = (blanksLeft[l] || 0) + 1
+              return (
+                <button
+                  key={word}
+                  onClick={() => toggleSaved({ word, score, blanksCover })}
+                  className="flex items-center gap-1 px-3 py-1 bg-wordle-green border border-wordle-green rounded-md shadow-sm"
+                >
+                  <span className="text-sm font-mono font-semibold tracking-wider uppercase text-white">
+                    {word.split('').map((c, i) => {
+                      if (blanksLeft[c] > 0) {
+                        blanksLeft[c]--
+                        return <span key={i} className="text-green-200">{c}</span>
+                      }
+                      return <span key={i}>{c}</span>
+                    })}
+                  </span>
+                  <span className="text-xs font-bold text-green-200">{score}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {searched && (
         <div className="mt-2">
@@ -214,12 +243,18 @@ export default function LettersHelper() {
           {results.length > 0 && (
             <div className="flex flex-wrap gap-2 max-h-96 overflow-y-auto pr-1">
               {results.map(({ word, score, blanksCover }) => {
+                const isSaved = saved.some(s => s.word === word)
                 const blanksLeft = {}
                 for (const l of blanksCover) blanksLeft[l] = (blanksLeft[l] || 0) + 1
                 return (
-                  <div
+                  <button
                     key={word}
-                    className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-300 rounded-md shadow-sm"
+                    onClick={() => toggleSaved({ word, score, blanksCover })}
+                    className={`flex items-center gap-1 px-3 py-1 rounded-md shadow-sm border transition-colors ${
+                      isSaved
+                        ? 'bg-green-50 border-wordle-green'
+                        : 'bg-white border-gray-300 hover:border-wordle-green'
+                    }`}
                   >
                     <span className="text-sm font-mono font-semibold tracking-wider uppercase">
                       {word.split('').map((c, i) => {
@@ -230,10 +265,8 @@ export default function LettersHelper() {
                         return <span key={i} className="text-gray-800">{c}</span>
                       })}
                     </span>
-                    <span className="text-xs font-bold text-wordle-green">
-                      {score}
-                    </span>
-                  </div>
+                    <span className="text-xs font-bold text-wordle-green">{score}</span>
+                  </button>
                 )
               })}
             </div>
