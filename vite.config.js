@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    chunkSizeWarningLimit: 1000,
+  },
   server: {
     allowedHosts: ['rasp5.local', 'words.weivco.com'],
   },
