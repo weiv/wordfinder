@@ -217,6 +217,7 @@ export default function LettersHelper() {
 
   return (
     <div>
+      {/* Fixed top bar */}
       <div className="fixed top-0 left-0 right-0 z-20 bg-white border-b border-gray-200">
         <div className="max-w-lg mx-auto px-4 py-1 flex justify-between items-center">
           <button
@@ -230,153 +231,165 @@ export default function LettersHelper() {
           >Reset</button>
         </div>
       </div>
-      <div className="h-8" />
-      {showHelp && (
-        <div className="text-sm text-gray-500 mb-4 space-y-1">
-          <p>Enter available letters to find all makeable words, sorted by Scrabble score. Use <code className="bg-gray-100 px-1 rounded font-mono">.</code> in Your letters for a blank tile.</p>
-          <p className="mt-1 font-semibold text-gray-600">Fixed pattern syntax:</p>
-          <ul className="text-xs space-y-0.5 list-disc list-inside">
-            <li><code className="bg-gray-100 px-1 rounded font-mono">A</code> — word contains A; rest from your letters</li>
-            <li><code className="bg-gray-100 px-1 rounded font-mono">^A</code> — word starts with A</li>
-            <li><code className="bg-gray-100 px-1 rounded font-mono">A$</code> — word ends with A</li>
-            <li><code className="bg-gray-100 px-1 rounded font-mono">.</code> in pattern — uses one letter from your pool</li>
-            <li><code className="bg-gray-100 px-1 rounded font-mono">A.B</code> — A, one pool letter, B (anywhere unless anchored)</li>
-          </ul>
-        </div>
-      )}
 
-      <div className="space-y-3 mb-4">
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">
-            Your letters
-          </label>
-          <input
-            ref={lettersRef}
-            autoFocus
-            type="text"
-            inputMode="none"
-            value={letters}
-            onChange={e => handleLettersChange(e.target.value)}
-            onFocus={() => setActiveField('letters')}
-            placeholder="e.g. DEROIBU"
-            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg font-mono uppercase tracking-widest focus:outline-none focus:border-wordle-green"
-            autoCapitalize="characters"
-            autoCorrect="off"
-            autoComplete="off"
-            spellCheck="false"
-          />
-          {letters.length > 0 && (() => {
-            const letterCount = letters.replace(/\./g, '').length
-            const blankCount = (letters.match(/\./g) || []).length
-            const display = letterCount > 0 && blankCount > 0
-              ? `${letterCount} letter${letterCount !== 1 ? 's' : ''} + ${blankCount} blank${blankCount !== 1 ? 's' : ''}`
-              : blankCount > 0
-              ? `${blankCount} blank${blankCount !== 1 ? 's' : ''}`
-              : `${letterCount} letter${letterCount !== 1 ? 's' : ''}`
-            return <p className="text-xs text-gray-400 mt-1">{display}</p>
-          })()}
-        </div>
+      {/* Main layout column: from below top bar to bottom of screen */}
+      <div className="fixed top-8 bottom-0 left-0 right-0 flex flex-col">
 
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">
-            Fixed pattern <span className="font-normal text-gray-400">(optional)</span>
-          </label>
-          <input
-            ref={posLettersRef}
-            type="text"
-            inputMode="none"
-            value={posLetters}
-            onChange={e => handlePosLettersChange(e.target.value)}
-            onFocus={() => setActiveField('posLetters')}
-            placeholder="e.g. ^A or A.B or ER$"
-            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg font-mono uppercase tracking-widest focus:outline-none focus:border-wordle-green"
-            autoCapitalize="characters"
-            autoCorrect="off"
-            autoComplete="off"
-            spellCheck="false"
-          />
-        </div>
-      </div>
-
-      {saved.length > 0 && (
-        <div className="mb-4">
-          <p className="text-sm font-semibold text-gray-700 mb-2">Saved</p>
-          <div className="flex flex-wrap gap-2">
-            {saved.map(({ word, score, blanksCover }) => (
-              <WordCard key={word} word={word} score={score} blanksCover={blanksCover}
-                variant="prominent" onClick={() => toggleSaved({ word, score, blanksCover })} />
-            ))}
+        {/* Input panel */}
+        <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-2">
+          <div className="max-w-lg mx-auto space-y-2">
+            {showHelp && (
+              <div className="text-sm text-gray-500 space-y-1">
+                <p>Enter available letters to find all makeable words, sorted by Scrabble score. Use <code className="bg-gray-100 px-1 rounded font-mono">.</code> in Your letters for a blank tile.</p>
+                <p className="mt-1 font-semibold text-gray-600">Fixed pattern syntax:</p>
+                <ul className="text-xs space-y-0.5 list-disc list-inside">
+                  <li><code className="bg-gray-100 px-1 rounded font-mono">A</code> — word contains A; rest from your letters</li>
+                  <li><code className="bg-gray-100 px-1 rounded font-mono">^A</code> — word starts with A</li>
+                  <li><code className="bg-gray-100 px-1 rounded font-mono">A$</code> — word ends with A</li>
+                  <li><code className="bg-gray-100 px-1 rounded font-mono">.</code> in pattern — uses one letter from your pool</li>
+                  <li><code className="bg-gray-100 px-1 rounded font-mono">A.B</code> — A, one pool letter, B (anywhere unless anchored)</li>
+                </ul>
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-0.5">
+                Your letters
+              </label>
+              <input
+                ref={lettersRef}
+                autoFocus
+                type="text"
+                inputMode="none"
+                value={letters}
+                onChange={e => handleLettersChange(e.target.value)}
+                onFocus={() => setActiveField('letters')}
+                placeholder="e.g. DEROIBU"
+                className="w-full px-3 py-1.5 border-2 border-gray-300 rounded-lg text-base font-mono uppercase tracking-widest focus:outline-none focus:border-wordle-green"
+                autoCapitalize="characters"
+                autoCorrect="off"
+                autoComplete="off"
+                spellCheck="false"
+              />
+              {letters.length > 0 && (() => {
+                const letterCount = letters.replace(/\./g, '').length
+                const blankCount = (letters.match(/\./g) || []).length
+                const display = letterCount > 0 && blankCount > 0
+                  ? `${letterCount} letter${letterCount !== 1 ? 's' : ''} + ${blankCount} blank${blankCount !== 1 ? 's' : ''}`
+                  : blankCount > 0
+                  ? `${blankCount} blank${blankCount !== 1 ? 's' : ''}`
+                  : `${letterCount} letter${letterCount !== 1 ? 's' : ''}`
+                return <p className="text-xs text-gray-400 mt-0.5">{display}</p>
+              })()}
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-0.5">
+                Fixed pattern <span className="font-normal text-gray-400">(optional)</span>
+              </label>
+              <input
+                ref={posLettersRef}
+                type="text"
+                inputMode="none"
+                value={posLetters}
+                onChange={e => handlePosLettersChange(e.target.value)}
+                onFocus={() => setActiveField('posLetters')}
+                placeholder="e.g. ^A or A.B or ER$"
+                className="w-full px-3 py-1.5 border-2 border-gray-300 rounded-lg text-base font-mono uppercase tracking-widest focus:outline-none focus:border-wordle-green"
+                autoCapitalize="characters"
+                autoCorrect="off"
+                autoComplete="off"
+                spellCheck="false"
+              />
+            </div>
           </div>
         </div>
-      )}
 
-      {searched && (
-        <div className="mt-2">
-          <p className="text-sm text-gray-500 mb-2 font-medium">
-            {results.length === 0
-              ? 'No words found'
-              : `Found ${results.length} word${results.length !== 1 ? 's' : ''}`}
-          </p>
-          {results.length > 0 && (
-            <div className="flex flex-wrap gap-2 max-h-96 overflow-y-auto pr-1">
-              {results.map(({ word, score, blanksCover }) => (
-                <WordCard key={word} word={word} score={score} blanksCover={blanksCover}
-                  variant={savedSet.has(word) ? 'saved' : 'normal'}
-                  onClick={() => toggleSaved({ word, score, blanksCover })} />
+        {/* Scrollable candidates */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-lg mx-auto px-4 py-2">
+            {saved.length > 0 && (
+              <div className="mb-4">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Saved</p>
+                <div className="flex flex-wrap gap-2">
+                  {saved.map(({ word, score, blanksCover }) => (
+                    <WordCard key={word} word={word} score={score} blanksCover={blanksCover}
+                      variant="prominent" onClick={() => toggleSaved({ word, score, blanksCover })} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {searched && (
+              <div>
+                <p className="text-sm text-gray-500 mb-2 font-medium">
+                  {results.length === 0
+                    ? 'No words found'
+                    : `Found ${results.length} word${results.length !== 1 ? 's' : ''}`}
+                </p>
+                {results.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {results.map(({ word, score, blanksCover }) => (
+                      <WordCard key={word} word={word} score={score} blanksCover={blanksCover}
+                        variant={savedSet.has(word) ? 'saved' : 'normal'}
+                        onClick={() => toggleSaved({ word, score, blanksCover })} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Virtual keyboard */}
+        <div className="flex-shrink-0 bg-gray-100 border-t border-gray-200 py-1.5 px-2">
+          <div className="max-w-lg mx-auto space-y-1">
+            <div className="flex gap-1 px-[10%]">
+              <button onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey('LEFT')}
+                className="flex-[2] h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+                ←
+              </button>
+              {['^', '.', '$'].map(key => (
+                <button key={key} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(key)}
+                  className="flex-1 h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+                  {key}
+                </button>
+              ))}
+              <button onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey('RIGHT')}
+                className="flex-[2] h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+                →
+              </button>
+            </div>
+            <div className="flex gap-1">
+              {'QWERTYUIOP'.split('').map(l => (
+                <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
+                  className="flex-1 min-w-0 h-9 bg-white rounded text-xs font-bold shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200">
+                  {l}
+                </button>
               ))}
             </div>
-          )}
+            <div className="flex gap-1 px-[5%]">
+              {'ASDFGHJKL'.split('').map(l => (
+                <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
+                  className="flex-1 min-w-0 h-9 bg-white rounded text-xs font-bold shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200">
+                  {l}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1">
+              {'ZXCVBNM'.split('').map(l => (
+                <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
+                  className="flex-1 min-w-0 h-9 bg-white rounded text-xs font-bold shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200">
+                  {l}
+                </button>
+              ))}
+              <button onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey('DEL')}
+                className="flex-[1.5] h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+                ⌫
+              </button>
+            </div>
+          </div>
         </div>
-      )}
 
-      {/* Virtual keyboard */}
-      <div className="fixed bottom-14 left-0 right-0 z-10 bg-gray-100 border-t border-gray-200 py-1.5 px-2">
-        <div className="max-w-lg mx-auto space-y-1">
-          <div className="flex gap-1 px-[10%]">
-            <button onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey('LEFT')}
-              className="flex-[2] h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
-              ←
-            </button>
-            {['^', '.', '$'].map(key => (
-              <button key={key} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(key)}
-                className="flex-1 h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
-                {key}
-              </button>
-            ))}
-            <button onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey('RIGHT')}
-              className="flex-[2] h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
-              →
-            </button>
-          </div>
-          <div className="flex gap-1">
-            {'QWERTYUIOP'.split('').map(l => (
-              <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
-                className="flex-1 min-w-0 h-9 bg-white rounded text-xs font-bold shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200">
-                {l}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-1 px-[5%]">
-            {'ASDFGHJKL'.split('').map(l => (
-              <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
-                className="flex-1 min-w-0 h-9 bg-white rounded text-xs font-bold shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200">
-                {l}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-1">
-            {'ZXCVBNM'.split('').map(l => (
-              <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
-                className="flex-1 min-w-0 h-9 bg-white rounded text-xs font-bold shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200">
-                {l}
-              </button>
-            ))}
-            <button onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey('DEL')}
-              className="flex-[1.5] h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
-              ⌫
-            </button>
-          </div>
-        </div>
+        {/* Spacer for bottom nav */}
+        <div className="flex-shrink-0 h-14 bg-white" />
       </div>
     </div>
   )
