@@ -61,7 +61,7 @@ function matchPattern(word, patternCore, anchorStart, anchorEnd, available) {
 
 // variant: 'prominent' (saved section) | 'saved' (result, in saved) | 'normal' (result, not saved)
 function WordCard({ word, score, blanksCover, variant, onClick,
-                    onRemove, onScoreClick, isEditing, editValue, onEditChange, onEditDone }) {
+                    onRemove, onScoreDown, onScoreUp }) {
   const blanksLeft = {}
   for (const l of blanksCover) blanksLeft[l] = (blanksLeft[l] || 0) + 1
 
@@ -80,22 +80,9 @@ function WordCard({ word, score, blanksCover, variant, onClick,
         <button onClick={onRemove} className="flex items-center">
           {wordLetters}
         </button>
-        {isEditing ? (
-          <input
-            type="number"
-            inputMode="numeric"
-            autoFocus
-            value={editValue}
-            onChange={e => onEditChange(e.target.value)}
-            onBlur={onEditDone}
-            onKeyDown={e => e.key === 'Enter' && onEditDone()}
-            className="w-10 text-xs font-bold text-center bg-transparent border-b border-green-200 text-green-200 outline-none"
-          />
-        ) : (
-          <button onClick={onScoreClick} className="text-xs font-bold text-green-200">
-            {score}
-          </button>
-        )}
+        <button onClick={onScoreDown} className="text-green-200 text-xs leading-none px-0.5 active:opacity-60">▼</button>
+        <span className="text-xs font-bold text-green-200 min-w-[1.5rem] text-center">{score}</span>
+        <button onClick={onScoreUp} className="text-green-200 text-xs leading-none px-0.5 active:opacity-60">▲</button>
       </div>
     )
   }
@@ -125,8 +112,6 @@ export default function LettersHelper() {
   const [showHelp, setShowHelp] = useState(false)
   const [saved, setSaved] = useState(() => JSON.parse(localStorage.getItem('savedWords') || '[]'))
   const [activeField, setActiveField] = useState('letters')
-  const [editingWord, setEditingWord] = useState(null)
-  const [editScoreInput, setEditScoreInput] = useState('')
   const savedSet = useMemo(() => new Set(saved.map(s => s.word)), [saved])
   const lettersRef = useRef(null)
   const posLettersRef = useRef(null)
@@ -354,15 +339,8 @@ export default function LettersHelper() {
                     <WordCard key={word} word={word} score={gameScore ?? score} blanksCover={blanksCover}
                       variant="prominent"
                       onRemove={() => toggleSaved({ word, score, blanksCover, gameScore })}
-                      onScoreClick={() => { setEditingWord(word); setEditScoreInput(String(gameScore ?? score)) }}
-                      isEditing={editingWord === word}
-                      editValue={editScoreInput}
-                      onEditChange={setEditScoreInput}
-                      onEditDone={() => {
-                        const parsed = parseInt(editScoreInput, 10)
-                        if (!isNaN(parsed)) updateGameScore(word, parsed)
-                        setEditingWord(null)
-                      }}
+                      onScoreDown={() => updateGameScore(word, (gameScore ?? score) - 1)}
+                      onScoreUp={() => updateGameScore(word, (gameScore ?? score) + 1)}
                     />
                   ))}
                 </div>
