@@ -60,29 +60,59 @@ function matchPattern(word, patternCore, anchorStart, anchorEnd, available) {
 }
 
 // variant: 'prominent' (saved section) | 'saved' (result, in saved) | 'normal' (result, not saved)
-function WordCard({ word, score, blanksCover, variant, onClick }) {
+function WordCard({ word, score, blanksCover, variant, onClick,
+                    onRemove, onScoreClick, isEditing, editValue, onEditChange, onEditDone }) {
   const blanksLeft = {}
   for (const l of blanksCover) blanksLeft[l] = (blanksLeft[l] || 0) + 1
-  const prominent = variant === 'prominent'
+
+  const wordLetters = (
+    <span className="text-sm font-mono font-semibold tracking-wider uppercase text-white">
+      {word.split('').map((c, i) => {
+        if (blanksLeft[c] > 0) { blanksLeft[c]--; return <span key={i} className="text-green-200">{c}</span> }
+        return <span key={i}>{c}</span>
+      })}
+    </span>
+  )
+
+  if (variant === 'prominent') {
+    return (
+      <div className="flex items-center gap-1 px-3 py-1 rounded-md shadow-sm border bg-wordle-green border-wordle-green">
+        <button onClick={onRemove} className="flex items-center">
+          {wordLetters}
+        </button>
+        {isEditing ? (
+          <input
+            type="number"
+            inputMode="numeric"
+            autoFocus
+            value={editValue}
+            onChange={e => onEditChange(e.target.value)}
+            onBlur={onEditDone}
+            onKeyDown={e => e.key === 'Enter' && onEditDone()}
+            className="w-10 text-xs font-bold text-center bg-transparent border-b border-green-200 text-green-200 outline-none"
+          />
+        ) : (
+          <button onClick={onScoreClick} className="text-xs font-bold text-green-200">
+            {score}
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  const blanksLeft2 = {}
+  for (const l of blanksCover) blanksLeft2[l] = (blanksLeft2[l] || 0) + 1
   return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1 px-3 py-1 rounded-md shadow-sm border transition-colors ${
-        prominent ? 'bg-wordle-green border-wordle-green' :
-        variant === 'saved' ? 'bg-green-50 border-wordle-green' :
-        'bg-white border-gray-300 hover:border-wordle-green'
-      }`}
-    >
-      <span className={`text-sm font-mono font-semibold tracking-wider uppercase${prominent ? ' text-white' : ''}`}>
+    <button onClick={onClick} className={`flex items-center gap-1 px-3 py-1 rounded-md shadow-sm border transition-colors ${
+      variant === 'saved' ? 'bg-green-50 border-wordle-green' : 'bg-white border-gray-300 hover:border-wordle-green'
+    }`}>
+      <span className="text-sm font-mono font-semibold tracking-wider uppercase">
         {word.split('').map((c, i) => {
-          if (blanksLeft[c] > 0) {
-            blanksLeft[c]--
-            return <span key={i} className={prominent ? 'text-green-200' : 'text-gray-400'}>{c}</span>
-          }
-          return <span key={i} className={prominent ? '' : 'text-gray-800'}>{c}</span>
+          if (blanksLeft2[c] > 0) { blanksLeft2[c]--; return <span key={i} className="text-gray-400">{c}</span> }
+          return <span key={i} className="text-gray-800">{c}</span>
         })}
       </span>
-      <span className={`text-xs font-bold ${prominent ? 'text-green-200' : 'text-wordle-green'}`}>{score}</span>
+      <span className="text-xs font-bold text-wordle-green">{score}</span>
     </button>
   )
 }
@@ -95,6 +125,8 @@ export default function LettersHelper() {
   const [showHelp, setShowHelp] = useState(false)
   const [saved, setSaved] = useState(() => JSON.parse(localStorage.getItem('savedWords') || '[]'))
   const [activeField, setActiveField] = useState('letters')
+  const [editingWord, setEditingWord] = useState(null)
+  const [editScoreInput, setEditScoreInput] = useState('')
   const savedSet = useMemo(() => new Set(saved.map(s => s.word)), [saved])
   const lettersRef = useRef(null)
   const posLettersRef = useRef(null)
@@ -150,6 +182,14 @@ export default function LettersHelper() {
     setResults(matched)
     setSearched(true)
   }, [letters, posLetters])
+
+  const updateGameScore = (word, gameScore) => {
+    setSaved(prev => {
+      const next = prev.map(s => s.word === word ? { ...s, gameScore } : s)
+      localStorage.setItem('savedWords', JSON.stringify(next))
+      return next
+    })
+  }
 
   const toggleSaved = (wordObj) => {
     setSaved(prev => {
@@ -310,9 +350,20 @@ export default function LettersHelper() {
               <div className="mb-4">
                 <p className="text-sm font-semibold text-gray-700 mb-2">Saved</p>
                 <div className="flex flex-wrap gap-2">
-                  {saved.map(({ word, score, blanksCover }) => (
-                    <WordCard key={word} word={word} score={score} blanksCover={blanksCover}
-                      variant="prominent" onClick={() => toggleSaved({ word, score, blanksCover })} />
+                  {saved.map(({ word, score, blanksCover, gameScore }) => (
+                    <WordCard key={word} word={word} score={gameScore ?? score} blanksCover={blanksCover}
+                      variant="prominent"
+                      onRemove={() => toggleSaved({ word, score, blanksCover, gameScore })}
+                      onScoreClick={() => { setEditingWord(word); setEditScoreInput(String(gameScore ?? score)) }}
+                      isEditing={editingWord === word}
+                      editValue={editScoreInput}
+                      onEditChange={setEditScoreInput}
+                      onEditDone={() => {
+                        const parsed = parseInt(editScoreInput, 10)
+                        if (!isNaN(parsed)) updateGameScore(word, parsed)
+                        setEditingWord(null)
+                      }}
+                    />
                   ))}
                 </div>
               </div>
