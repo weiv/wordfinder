@@ -19,7 +19,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <main className={`flex-1 overflow-y-auto ${mode === 'wordle' ? 'pb-[60vh]' : 'pb-14'}`}>
+      <main className={`flex-1 overflow-y-auto ${mode === 'wordle' ? 'pb-[60vh]' : mode === 'letters' ? 'pb-56' : 'pb-14'}`}>
         <div className="max-w-lg mx-auto px-4 py-4">
           {mode === 'wordle' && <WordleHelper />}
           {mode === 'crossword' && <CrosswordHelper />}

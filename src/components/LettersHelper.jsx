@@ -94,8 +94,12 @@ export default function LettersHelper() {
   const [searched, setSearched] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [saved, setSaved] = useState(() => JSON.parse(localStorage.getItem('savedWords') || '[]'))
+  const [activeField, setActiveField] = useState('letters')
   const savedSet = useMemo(() => new Set(saved.map(s => s.word)), [saved])
   const lettersRef = useRef(null)
+  const posLettersRef = useRef(null)
+  const pendingLettersCursor = useRef(null)
+  const pendingPosLettersCursor = useRef(null)
 
   const handleLettersChange = (val) => {
     const clean = val.replace(/[^a-zA-Z.]/g, '').toUpperCase()
@@ -108,6 +112,20 @@ export default function LettersHelper() {
     setPosLetters(clean)
     localStorage.setItem('posLetters', clean)
   }
+
+  useEffect(() => {
+    if (pendingLettersCursor.current !== null) {
+      lettersRef.current?.setSelectionRange(pendingLettersCursor.current, pendingLettersCursor.current)
+      pendingLettersCursor.current = null
+    }
+  }, [letters])
+
+  useEffect(() => {
+    if (pendingPosLettersCursor.current !== null) {
+      posLettersRef.current?.setSelectionRange(pendingPosLettersCursor.current, pendingPosLettersCursor.current)
+      pendingPosLettersCursor.current = null
+    }
+  }, [posLetters])
 
   useEffect(() => {
     if (!letters) {
@@ -155,6 +173,48 @@ export default function LettersHelper() {
     lettersRef.current?.focus()
   }
 
+  const handleVirtualKey = (key) => {
+    const isLetters = activeField === 'letters'
+    const value = isLetters ? letters : posLetters
+    const ref = isLetters ? lettersRef : posLettersRef
+    const setter = isLetters ? handleLettersChange : handlePosLettersChange
+    const pendingCursor = isLetters ? pendingLettersCursor : pendingPosLettersCursor
+
+    // ^ and $ are not valid in the letters field
+    if (key !== 'DEL' && key !== 'LEFT' && key !== 'RIGHT') {
+      if (isLetters && !/^[A-Z.]$/.test(key)) return
+    }
+
+    const el = ref.current
+    if (!el) return
+
+    el.focus()
+    const start = el.selectionStart ?? value.length
+    const end = el.selectionEnd ?? value.length
+
+    if (key === 'DEL') {
+      if (start !== end) {
+        const newVal = value.slice(0, start) + value.slice(end)
+        pendingCursor.current = start
+        setter(newVal)
+      } else if (start > 0) {
+        const newVal = value.slice(0, start - 1) + value.slice(start)
+        pendingCursor.current = start - 1
+        setter(newVal)
+      }
+    } else if (key === 'LEFT') {
+      const newPos = Math.max(0, start - 1)
+      el.setSelectionRange(newPos, newPos)
+    } else if (key === 'RIGHT') {
+      const newPos = Math.min(value.length, end + 1)
+      el.setSelectionRange(newPos, newPos)
+    } else {
+      const newVal = value.slice(0, start) + key + value.slice(end)
+      pendingCursor.current = start + 1
+      setter(newVal)
+    }
+  }
+
   return (
     <div>
       <div className="fixed top-0 left-0 right-0 z-20 bg-white border-b border-gray-200">
@@ -194,8 +254,10 @@ export default function LettersHelper() {
             ref={lettersRef}
             autoFocus
             type="text"
+            inputMode="none"
             value={letters}
             onChange={e => handleLettersChange(e.target.value)}
+            onFocus={() => setActiveField('letters')}
             placeholder="e.g. DEROIBU"
             className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg font-mono uppercase tracking-widest focus:outline-none focus:border-wordle-green"
             autoCapitalize="characters"
@@ -220,9 +282,12 @@ export default function LettersHelper() {
             Fixed pattern <span className="font-normal text-gray-400">(optional)</span>
           </label>
           <input
+            ref={posLettersRef}
             type="text"
+            inputMode="none"
             value={posLetters}
             onChange={e => handlePosLettersChange(e.target.value)}
+            onFocus={() => setActiveField('posLetters')}
             placeholder="e.g. ^A or A.B or ER$"
             className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg font-mono uppercase tracking-widest focus:outline-none focus:border-wordle-green"
             autoCapitalize="characters"
@@ -263,6 +328,56 @@ export default function LettersHelper() {
           )}
         </div>
       )}
+
+      {/* Virtual keyboard */}
+      <div className="fixed bottom-14 left-0 right-0 z-10 bg-gray-100 border-t border-gray-200 py-1.5 px-2">
+        <div className="max-w-lg mx-auto space-y-1">
+          <div className="flex gap-1 px-[10%]">
+            <button onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey('LEFT')}
+              className="flex-[2] h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+              ←
+            </button>
+            {['^', '.', '$'].map(key => (
+              <button key={key} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(key)}
+                className="flex-1 h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+                {key}
+              </button>
+            ))}
+            <button onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey('RIGHT')}
+              className="flex-[2] h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+              →
+            </button>
+          </div>
+          <div className="flex gap-1">
+            {'QWERTYUIOP'.split('').map(l => (
+              <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
+                className="flex-1 min-w-0 h-9 bg-white rounded text-xs font-bold shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200">
+                {l}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-1 px-[5%]">
+            {'ASDFGHJKL'.split('').map(l => (
+              <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
+                className="flex-1 min-w-0 h-9 bg-white rounded text-xs font-bold shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200">
+                {l}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-1">
+            {'ZXCVBNM'.split('').map(l => (
+              <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
+                className="flex-1 min-w-0 h-9 bg-white rounded text-xs font-bold shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200">
+                {l}
+              </button>
+            ))}
+            <button onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey('DEL')}
+              className="flex-[1.5] h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+              ⌫
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
