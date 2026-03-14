@@ -3,7 +3,7 @@ import { WORDS } from '../data/words'
 
 const SCORES = {
   A:1, E:1, I:1, O:1, N:1, S:1, T:1, R:1,
-  D:2, U:2, L:2
+  D:2, U:2, L:2,
   C:3, H:3, M:3, P:3,
   B:4, G:4, F:4, V:4, Y:4,
   W:5,
