@@ -66,7 +66,7 @@ function WordCard({ word, score, blanksCover, variant, onClick,
   for (const l of blanksCover) blanksLeft[l] = (blanksLeft[l] || 0) + 1
 
   const wordLetters = (
-    <span className="text-sm font-mono font-semibold tracking-wider uppercase text-white">
+    <span className="text-sm font-mono font-semibold uppercase text-white">
       {word.split('').map((c, i) => {
         if (blanksLeft[c] > 0) { blanksLeft[c]--; return <span key={i} className="text-green-200">{c}</span> }
         return <span key={i}>{c}</span>
@@ -76,13 +76,15 @@ function WordCard({ word, score, blanksCover, variant, onClick,
 
   if (variant === 'prominent') {
     return (
-      <div className="flex items-center gap-1 px-3 py-1 rounded-md shadow-sm border bg-wordle-green border-wordle-green">
+      <div className="flex items-center gap-1 px-1.5 py-1 rounded-md shadow-sm border bg-wordle-green border-wordle-green">
         <button onClick={onRemove} className="flex items-center">
           {wordLetters}
         </button>
-        <button onClick={onScoreDown} className="text-green-200 text-xs leading-none px-0.5 active:opacity-60">▼</button>
-        <span className="text-xs font-bold text-green-200 min-w-[1.5rem] text-center">{score}</span>
-        <button onClick={onScoreUp} className="text-green-200 text-xs leading-none px-0.5 active:opacity-60">▲</button>
+        <div className="flex items-center gap-0">
+          <button onClick={onScoreDown} className="text-green-200 text-xs leading-none px-0.5 active:opacity-60">▼</button>
+          <span className="text-xs font-bold text-green-200 min-w-[1.5rem] text-center">{score}</span>
+          <button onClick={onScoreUp} className="text-green-200 text-xs leading-none px-0.5 active:opacity-60">▲</button>
+        </div>
       </div>
     )
   }
