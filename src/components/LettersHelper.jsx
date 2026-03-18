@@ -507,28 +507,28 @@ export default function LettersHelper() {
         </div>
 
         {/* Virtual keyboard */}
-        <div className="flex-shrink-0 bg-gray-100 border-t border-gray-200 py-1.5 px-2">
-          <div className="max-w-lg mx-auto space-y-1">
+        <div className="flex-shrink-0 border-t border-gray-100 py-2 px-2">
+          <div className="max-w-lg mx-auto flex flex-col gap-1">
             <div className="flex gap-1 px-[10%]">
               <button onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey('LEFT')}
-                className="flex-[2] h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+                className="flex-[2] h-10 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500">
                 ←
               </button>
               {['^', '.', '$'].map(key => (
                 <button key={key} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(key)}
-                  className="flex-1 h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+                  className="flex-1 h-10 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500">
                   {key}
                 </button>
               ))}
               <button onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey('RIGHT')}
-                className="flex-[2] h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+                className="flex-[2] h-10 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500">
                 →
               </button>
             </div>
             <div className="flex gap-1">
               {KB_ROW1.map(l => (
                 <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
-                  className="flex-1 min-w-0 h-9 bg-white rounded text-xs font-bold shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200">
+                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
                   {l}
                 </button>
               ))}
@@ -536,7 +536,7 @@ export default function LettersHelper() {
             <div className="flex gap-1 px-[5%]">
               {KB_ROW2.map(l => (
                 <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
-                  className="flex-1 min-w-0 h-9 bg-white rounded text-xs font-bold shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200">
+                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
                   {l}
                 </button>
               ))}
@@ -544,20 +544,17 @@ export default function LettersHelper() {
             <div className="flex gap-1">
               {KB_ROW3.map(l => (
                 <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
-                  className="flex-1 min-w-0 h-9 bg-white rounded text-xs font-bold shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200">
+                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
                   {l}
                 </button>
               ))}
               <button onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey('DEL')}
-                className="flex-[1.5] h-9 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+                className="flex-[1.5] h-10 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500">
                 ⌫
               </button>
             </div>
           </div>
         </div>
-
-        {/* Spacer for bottom nav */}
-        <div className="flex-shrink-0 h-14 bg-white" />
       </div>
     </div>
   )
