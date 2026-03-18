@@ -180,6 +180,9 @@ export default function LettersHelper() {
   const [creatingSession, setCreatingSession] = useState(false)
   const [newName, setNewName] = useState('')
   const newNameRef = useRef(null)
+  const [renamingSession, setRenamingSession] = useState(null)
+  const [renameName, setRenameName] = useState('')
+  const renameRef = useRef(null)
   const lettersRef = useRef(null)
   const posLettersRef = useRef(null)
   const pendingLettersCursor = useRef(null)
@@ -286,6 +289,19 @@ export default function LettersHelper() {
     if (creatingSession) newNameRef.current?.focus()
   }, [creatingSession])
 
+  useEffect(() => {
+    if (renamingSession) renameRef.current?.focus()
+  }, [renamingSession])
+
+  function renameSession(id, name) {
+    setSessions(prev => {
+      const next = prev.map(s => s.id === id ? { ...s, name } : s)
+      localStorage.setItem('sessions', JSON.stringify(next))
+      return next
+    })
+    setRenamingSession(null)
+  }
+
   const updateGameScore = (word, gameScore) => {
     const next = saved.map(s => s.word === word ? { ...s, gameScore } : s)
     updateActiveSession({ savedWords: next })
@@ -367,14 +383,31 @@ export default function LettersHelper() {
       <div className="fixed top-[4.5rem] left-0 right-0 z-20 bg-white border-b border-gray-200">
         <div className="flex items-center gap-1.5 overflow-x-auto px-3 py-1.5 max-w-lg mx-auto">
           {sessions.map(s => (
-            <SessionPill key={s.id} session={s}
-              isActive={s.id === activeSessionId}
-              isPendingDelete={pendingDelete === s.id}
-              onTap={() => { if (pendingDelete) { setPendingDelete(null); return } switchSession(s.id) }}
-              onLongPress={() => setPendingDelete(s.id)}
-              onConfirmDelete={() => deleteSession(s.id)}
-              onCancelDelete={() => setPendingDelete(null)}
-            />
+            renamingSession === s.id ? (
+              <input key={s.id} ref={renameRef} value={renameName}
+                onChange={e => setRenameName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && renameName.trim()) renameSession(s.id, renameName.trim())
+                  if (e.key === 'Escape') setRenamingSession(null)
+                }}
+                onBlur={() => { if (renameName.trim()) renameSession(s.id, renameName.trim()); else setRenamingSession(null) }}
+                className="w-20 h-6 px-2 text-xs border border-wordle-green rounded-full focus:outline-none"
+                autoComplete="off"
+              />
+            ) : (
+              <SessionPill key={s.id} session={s}
+                isActive={s.id === activeSessionId}
+                isPendingDelete={pendingDelete === s.id}
+                onTap={() => {
+                  if (pendingDelete) { setPendingDelete(null); return }
+                  if (s.id === activeSessionId) { setRenameName(s.name); setRenamingSession(s.id) }
+                  else switchSession(s.id)
+                }}
+                onLongPress={() => setPendingDelete(s.id)}
+                onConfirmDelete={() => deleteSession(s.id)}
+                onCancelDelete={() => setPendingDelete(null)}
+              />
+            )
           ))}
           {creatingSession ? (
             <input ref={newNameRef} value={newName} onChange={e => setNewName(e.target.value)}
