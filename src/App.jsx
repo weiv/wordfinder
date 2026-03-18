@@ -19,20 +19,20 @@ export default function App() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <main className={`flex-1 overflow-y-auto ${mode === 'wordle' ? 'pb-[60vh]' : 'pb-14'}`}>
+      <main className={`flex-1 overflow-y-auto pt-10 ${mode === 'wordle' ? 'pb-[60vh]' : ''}`}>
         <div className="max-w-lg mx-auto px-4 py-4">
           {mode === 'wordle' && <WordleHelper />}
           {mode === 'crossword' && <CrosswordHelper />}
           {mode === 'letters' && <LettersHelper />}
         </div>
       </main>
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10">
-        <div className="max-w-lg mx-auto flex">
+      <nav className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-30 h-10">
+        <div className="max-w-lg mx-auto flex h-full">
           {tabs.map(({ key, label }, i) => (
             <button
               key={key}
               onClick={() => handleModeChange(key)}
-              className={`flex-1 py-3 text-sm font-semibold transition-colors
+              className={`flex-1 py-2 text-sm font-semibold transition-colors
                 ${i > 0 ? 'border-l border-gray-200' : ''}
                 ${mode === key ? 'bg-wordle-green text-white' : 'text-gray-600 hover:bg-gray-50'}
               `}

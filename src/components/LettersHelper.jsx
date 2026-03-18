@@ -106,30 +106,142 @@ function WordCard({ word, score, blanksCover, variant, onClick,
   )
 }
 
+function SessionPill({ session, isActive, isPendingDelete, onTap, onLongPress, onConfirmDelete, onCancelDelete }) {
+  const timer = useRef(null)
+  const cancel = () => clearTimeout(timer.current)
+
+  if (isPendingDelete) {
+    return (
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <span className="text-xs text-red-500 font-semibold px-1">{session.name}?</span>
+        <button onClick={onConfirmDelete}
+          className="w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center active:opacity-70">✓</button>
+        <button onClick={onCancelDelete}
+          className="w-5 h-5 rounded-full bg-gray-300 text-gray-600 text-xs flex items-center justify-center active:opacity-70">✕</button>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onPointerDown={() => { timer.current = setTimeout(onLongPress, 500) }}
+      onPointerUp={cancel} onPointerLeave={cancel}
+      onClick={onTap}
+      className={`flex-shrink-0 px-3 h-6 rounded-full text-xs font-semibold select-none transition-colors ${
+        isActive ? 'bg-wordle-green text-white' : 'bg-gray-200 text-gray-600 active:bg-gray-300'
+      }`}
+    >
+      {session.name}
+    </button>
+  )
+}
+
+const KB_ROW1 = 'QWERTYUIOP'.split('')
+const KB_ROW2 = 'ASDFGHJKL'.split('')
+const KB_ROW3 = 'ZXCVBNM'.split('')
+
+function newSession(name, id = Date.now().toString()) {
+  return { id, name, letters: '', posLetters: '', savedWords: [] }
+}
+
+function loadSessions() {
+  const raw = localStorage.getItem('sessions')
+  if (!raw) {
+    const session = {
+      id: '1', name: 'Game 1',
+      letters:    localStorage.getItem('letters') || '',
+      posLetters: localStorage.getItem('posLetters') || '',
+      savedWords: JSON.parse(localStorage.getItem('savedWords') || '[]'),
+    }
+    localStorage.setItem('sessions', JSON.stringify([session]))
+    localStorage.setItem('activeSessionId', '1')
+    localStorage.removeItem('letters')
+    localStorage.removeItem('posLetters')
+    localStorage.removeItem('savedWords')
+    return { sessions: [session], activeSessionId: '1' }
+  }
+  const sessions = JSON.parse(raw)
+  return {
+    sessions,
+    activeSessionId: localStorage.getItem('activeSessionId') || sessions[0].id,
+  }
+}
+
+const _initialState = loadSessions()
+
 export default function LettersHelper() {
-  const [letters, setLetters] = useState(() => localStorage.getItem('letters') || '')
-  const [posLetters, setPosLetters] = useState(() => localStorage.getItem('posLetters') || '')
+  const [sessions, setSessions] = useState(_initialState.sessions)
+  const [activeSessionId, setActiveSessionId] = useState(_initialState.activeSessionId)
   const [results, setResults] = useState([])
   const [searched, setSearched] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
-  const [saved, setSaved] = useState(() => JSON.parse(localStorage.getItem('savedWords') || '[]'))
   const [activeField, setActiveField] = useState('letters')
-  const savedSet = useMemo(() => new Set(saved.map(s => s.word)), [saved])
+  const [pendingDelete, setPendingDelete] = useState(null)
+  const [creatingSession, setCreatingSession] = useState(false)
+  const [newName, setNewName] = useState('')
+  const newNameRef = useRef(null)
   const lettersRef = useRef(null)
   const posLettersRef = useRef(null)
   const pendingLettersCursor = useRef(null)
   const pendingPosLettersCursor = useRef(null)
 
+  const activeSession = sessions.find(s => s.id === activeSessionId) ?? sessions[0]
+  const letters    = activeSession.letters
+  const posLetters = activeSession.posLetters
+  const saved      = activeSession.savedWords
+  const savedSet = useMemo(() => new Set(saved.map(s => s.word)), [saved])
+
+  function updateActiveSession(patch) {
+    setSessions(prev => {
+      const next = prev.map(s => s.id === activeSessionId ? { ...s, ...patch } : s)
+      localStorage.setItem('sessions', JSON.stringify(next))
+      return next
+    })
+  }
+
+  const clearSearch = () => { setResults([]); setSearched(false) }
+
+  function createSession(name) {
+    const s = newSession(name)
+    setSessions(prev => {
+      const next = [...prev, s]
+      localStorage.setItem('sessions', JSON.stringify(next))
+      return next
+    })
+    setActiveSessionId(s.id)
+    localStorage.setItem('activeSessionId', s.id)
+    clearSearch()
+  }
+
+  function switchSession(id) {
+    setActiveSessionId(id)
+    localStorage.setItem('activeSessionId', id)
+    clearSearch()
+  }
+
+  function deleteSession(id) {
+    setSessions(prev => {
+      let next = prev.filter(s => s.id !== id)
+      if (next.length === 0) next = [newSession('Game 1')]
+      localStorage.setItem('sessions', JSON.stringify(next))
+      if (id === activeSessionId) {
+        setActiveSessionId(next[0].id)
+        localStorage.setItem('activeSessionId', next[0].id)
+      }
+      return next
+    })
+    setPendingDelete(null)
+    clearSearch()
+  }
+
   const handleLettersChange = (val) => {
     const clean = val.replace(/[^a-zA-Z.]/g, '').toUpperCase()
-    setLetters(clean)
-    localStorage.setItem('letters', clean)
+    updateActiveSession({ letters: clean })
   }
 
   const handlePosLettersChange = (val) => {
     const clean = val.replace(/[^a-zA-Z.^$#@!]/g, '').toUpperCase()
-    setPosLetters(clean)
-    localStorage.setItem('posLetters', clean)
+    updateActiveSession({ posLetters: clean })
   }
 
   useEffect(() => {
@@ -170,33 +282,25 @@ export default function LettersHelper() {
     setSearched(true)
   }, [letters, posLetters])
 
+  useEffect(() => {
+    if (creatingSession) newNameRef.current?.focus()
+  }, [creatingSession])
+
   const updateGameScore = (word, gameScore) => {
-    setSaved(prev => {
-      const next = prev.map(s => s.word === word ? { ...s, gameScore } : s)
-      localStorage.setItem('savedWords', JSON.stringify(next))
-      return next
-    })
+    const next = saved.map(s => s.word === word ? { ...s, gameScore } : s)
+    updateActiveSession({ savedWords: next })
   }
 
   const toggleSaved = (wordObj) => {
-    setSaved(prev => {
-      const next = prev.some(s => s.word === wordObj.word)
-        ? prev.filter(s => s.word !== wordObj.word)
-        : [...prev, wordObj]
-      localStorage.setItem('savedWords', JSON.stringify(next))
-      return next
-    })
+    const next = saved.some(s => s.word === wordObj.word)
+      ? saved.filter(s => s.word !== wordObj.word)
+      : [...saved, wordObj]
+    updateActiveSession({ savedWords: next })
   }
 
   const handleReset = () => {
-    setLetters('')
-    setPosLetters('')
-    localStorage.setItem('letters', '')
-    localStorage.setItem('posLetters', '')
-    setSaved([])
-    localStorage.setItem('savedWords', '[]')
-    setResults([])
-    setSearched(false)
+    updateActiveSession({ letters: '', posLetters: '', savedWords: [] })
+    clearSearch()
     lettersRef.current?.focus()
   }
 
@@ -245,7 +349,7 @@ export default function LettersHelper() {
   return (
     <div>
       {/* Fixed top bar */}
-      <div className="fixed top-0 left-0 right-0 z-20 bg-white border-b border-gray-200">
+      <div className="fixed top-10 left-0 right-0 z-20 bg-white border-b border-gray-200">
         <div className="max-w-lg mx-auto px-4 py-1 flex justify-between items-center">
           <button
             onClick={() => setShowHelp(h => !h)}
@@ -259,8 +363,41 @@ export default function LettersHelper() {
         </div>
       </div>
 
-      {/* Main layout column: from below top bar to bottom of screen */}
-      <div className="fixed top-8 bottom-0 left-0 right-0 flex flex-col">
+      {/* Session strip */}
+      <div className="fixed top-[4.5rem] left-0 right-0 z-20 bg-white border-b border-gray-200">
+        <div className="flex items-center gap-1.5 overflow-x-auto px-3 py-1.5 max-w-lg mx-auto">
+          {sessions.map(s => (
+            <SessionPill key={s.id} session={s}
+              isActive={s.id === activeSessionId}
+              isPendingDelete={pendingDelete === s.id}
+              onTap={() => { if (pendingDelete) { setPendingDelete(null); return } switchSession(s.id) }}
+              onLongPress={() => setPendingDelete(s.id)}
+              onConfirmDelete={() => deleteSession(s.id)}
+              onCancelDelete={() => setPendingDelete(null)}
+            />
+          ))}
+          {creatingSession ? (
+            <input ref={newNameRef} value={newName} onChange={e => setNewName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && newName.trim()) { createSession(newName.trim()); setCreatingSession(false); setNewName('') }
+                if (e.key === 'Escape') { setCreatingSession(false); setNewName('') }
+              }}
+              onBlur={() => { if (newName.trim()) createSession(newName.trim()); setCreatingSession(false); setNewName('') }}
+              placeholder="Name…"
+              className="w-20 h-6 px-2 text-xs border border-wordle-green rounded-full focus:outline-none"
+              autoComplete="off"
+            />
+          ) : (
+            <button onClick={() => setCreatingSession(true)}
+              className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-200 text-gray-500 text-sm font-bold flex items-center justify-center active:bg-gray-300">
+              +
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Main layout column: from below session strip to bottom of screen */}
+      <div className="fixed top-[6.75rem] bottom-0 left-0 right-0 flex flex-col">
 
         {/* Input panel */}
         <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-2">
@@ -389,7 +526,7 @@ export default function LettersHelper() {
               </button>
             </div>
             <div className="flex gap-1">
-              {'QWERTYUIOP'.split('').map(l => (
+              {KB_ROW1.map(l => (
                 <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
                   className="flex-1 min-w-0 h-9 bg-white rounded text-xs font-bold shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200">
                   {l}
@@ -397,7 +534,7 @@ export default function LettersHelper() {
               ))}
             </div>
             <div className="flex gap-1 px-[5%]">
-              {'ASDFGHJKL'.split('').map(l => (
+              {KB_ROW2.map(l => (
                 <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
                   className="flex-1 min-w-0 h-9 bg-white rounded text-xs font-bold shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200">
                   {l}
@@ -405,7 +542,7 @@ export default function LettersHelper() {
               ))}
             </div>
             <div className="flex gap-1">
-              {'ZXCVBNM'.split('').map(l => (
+              {KB_ROW3.map(l => (
                 <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
                   className="flex-1 min-w-0 h-9 bg-white rounded text-xs font-bold shadow-sm border border-gray-300 hover:bg-gray-50 active:bg-gray-200">
                   {l}

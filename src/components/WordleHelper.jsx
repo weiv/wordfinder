@@ -196,7 +196,7 @@ export default function WordleHelper() {
       onKeyDown={handleKeyDown}
     >
       {/* Fixed top bar */}
-      <div className="fixed top-0 left-0 right-0 z-20 bg-white border-b border-gray-200">
+      <div className="fixed top-10 left-0 right-0 z-20 bg-white border-b border-gray-200">
         <div className="max-w-lg mx-auto px-4 py-1 flex justify-between items-center">
           <button
             onClick={() => setShowHelp(h => !h)}
@@ -224,7 +224,7 @@ export default function WordleHelper() {
       <WordResults words={results} searched={searched} />
 
       {/* Fixed bottom panel: tiles + keyboard — kept inside container div so onKeyDown still bubbles */}
-      <div className="fixed bottom-14 left-0 right-0 bg-white border-t border-gray-200 z-10 h-[calc(60vh-3.5rem)]">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10 h-[calc(60vh-3.5rem)]">
         <div className="max-w-lg mx-auto px-4 h-full flex flex-col">
 
           {/* Scrollable tile rows — fills remaining space above keyboard */}

@@ -57,7 +57,7 @@ export default function CrosswordHelper() {
 
   return (
     <div>
-      <div className="fixed top-0 left-0 right-0 z-20 bg-white border-b border-gray-200">
+      <div className="fixed top-10 left-0 right-0 z-20 bg-white border-b border-gray-200">
         <div className="max-w-lg mx-auto px-4 py-1 flex justify-between items-center">
           <button
             onClick={() => setShowHelp(h => !h)}
