@@ -14,9 +14,14 @@ const STATE_CLASSES = {
   gray: 'tile-gray text-white border-transparent',
 }
 
+const FIRST_GUESS = 'SLATE'
+
 function emptyGrid() {
-  return Array.from({ length: NUM_ROWS }, () =>
-    Array.from({ length: WORD_LEN }, () => ({ letter: '', state: 'empty' }))
+  return Array.from({ length: NUM_ROWS }, (_, ri) =>
+    Array.from({ length: WORD_LEN }, (_, ci) => ({
+      letter: ri === 0 ? FIRST_GUESS[ci] : '',
+      state: ri === 0 ? 'green' : 'empty',
+    }))
   )
 }
 
@@ -178,6 +183,20 @@ export default function WordleHelper() {
     rowRefs.current[activeCell.row]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [activeCell.row])
 
+  const handleWordClick = useCallback((word) => {
+    const rowIndex = grid.findIndex(row => row.every(cell => cell.letter === ''))
+    if (rowIndex === -1) return
+    setGrid(prev => {
+      const next = prev.map(r => r.map(c => ({ ...c })))
+      word.split('').forEach((letter, ci) => {
+        next[rowIndex][ci] = { letter, state: 'green' }
+      })
+      return next
+    })
+    setActiveCell({ row: rowIndex, col: 0 })
+    containerRef.current?.focus()
+  }, [grid])
+
   const handleReset = useCallback(() => {
     const empty = emptyGrid()
     setGrid(empty)
@@ -221,7 +240,7 @@ export default function WordleHelper() {
         </p>
       )}
 
-      <WordResults words={results} searched={searched} />
+      <WordResults words={results} searched={searched} onWordClick={handleWordClick} />
 
       {/* Fixed bottom panel: tiles + keyboard — kept inside container div so onKeyDown still bubbles */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10 h-[calc(60vh-3.5rem)]">

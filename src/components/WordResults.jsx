@@ -1,4 +1,4 @@
-export default function WordResults({ words, searched }) {
+export default function WordResults({ words, searched, onWordClick }) {
   if (!searched) return null
 
   return (
@@ -11,12 +11,22 @@ export default function WordResults({ words, searched }) {
       {words.length > 0 && (
         <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto pr-1">
           {words.map(word => (
-            <span
-              key={word}
-              className="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-mono font-semibold text-gray-800 shadow-sm tracking-wider uppercase"
-            >
-              {word}
-            </span>
+            onWordClick ? (
+              <button
+                key={word}
+                onClick={() => onWordClick(word)}
+                className="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-mono font-semibold text-gray-800 shadow-sm tracking-wider uppercase hover:border-wordle-green active:bg-green-50 transition-colors"
+              >
+                {word}
+              </button>
+            ) : (
+              <span
+                key={word}
+                className="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-mono font-semibold text-gray-800 shadow-sm tracking-wider uppercase"
+              >
+                {word}
+              </span>
+            )
           ))}
         </div>
       )}
