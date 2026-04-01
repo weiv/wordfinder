@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, Fragment } from 'react'
 import { WORDS } from '../data/words'
+import ScrabbleTile from './ScrabbleTile'
 
 const SCORES = {
   A:1, E:1, I:1, O:1, N:1, S:1, T:1, R:1,
@@ -169,13 +170,33 @@ function loadSessions() {
 
 const _initialState = loadSessions()
 
+// Serialize tile arrays back to strings
+function rackToString(tiles) { return tiles.join('') }
+function patternToString(tiles) {
+  const hasStart = tiles[0] === '^'
+  const hasEnd   = tiles[tiles.length - 1] === '$'
+  const core     = tiles.filter(t => t !== '^' && t !== '$').join('')
+  return (hasStart ? '^' : '') + core + (hasEnd ? '$' : '')
+}
+
+// Drop indicator line
+function DropIndicator() {
+  return (
+    <div
+      className="self-center rounded flex-shrink-0"
+      style={{ width: 2, height: 40, background: '#6aaa64', pointerEvents: 'none' }}
+    />
+  )
+}
+
 export default function LettersHelper() {
   const [sessions, setSessions] = useState(_initialState.sessions)
   const [activeSessionId, setActiveSessionId] = useState(_initialState.activeSessionId)
   const [results, setResults] = useState([])
   const [searched, setSearched] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
-  const [activeField, setActiveField] = useState('letters')
+  const [activeRow, setActiveRow] = useState('rack')
+  const [drag, setDrag] = useState(null)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [creatingSession, setCreatingSession] = useState(false)
   const [newName, setNewName] = useState('')
@@ -183,16 +204,35 @@ export default function LettersHelper() {
   const [renamingSession, setRenamingSession] = useState(null)
   const [renameName, setRenameName] = useState('')
   const renameRef = useRef(null)
-  const lettersRef = useRef(null)
-  const posLettersRef = useRef(null)
-  const pendingLettersCursor = useRef(null)
-  const pendingPosLettersCursor = useRef(null)
+  const rackRowRef    = useRef(null)
+  const patternRowRef = useRef(null)
+
+  // Keep a ref to the latest drag state for use inside event listeners
+  const dragRef = useRef(null)
+  dragRef.current = drag
 
   const activeSession = sessions.find(s => s.id === activeSessionId) ?? sessions[0]
   const letters    = activeSession.letters
   const posLetters = activeSession.posLetters
   const saved      = activeSession.savedWords
-  const savedSet = useMemo(() => new Set(saved.map(s => s.word)), [saved])
+  const savedSet   = useMemo(() => new Set(saved.map(s => s.word)), [saved])
+
+  // Derive tile arrays from strings
+  const rackTiles = useMemo(() => letters ? letters.split('') : [], [letters])
+  const patternTiles = useMemo(() => {
+    const arr = []
+    if (/^[\^#@]/.test(posLetters)) arr.push('^')
+    const core = posLetters.replace(/^[\^#@]/, '').replace(/[$!]$/, '')
+    if (core) arr.push(...core.split(''))
+    if (/[$!]$/.test(posLetters)) arr.push('$')
+    return arr
+  }, [posLetters])
+
+  // Keep refs updated so event-listener closures always see current arrays
+  const rackTilesRef    = useRef(rackTiles)
+  rackTilesRef.current  = rackTiles
+  const patternTilesRef = useRef(patternTiles)
+  patternTilesRef.current = patternTiles
 
   function updateActiveSession(patch) {
     setSessions(prev => {
@@ -237,30 +277,159 @@ export default function LettersHelper() {
     clearSearch()
   }
 
-  const handleLettersChange = (val) => {
-    const clean = val.replace(/[^a-zA-Z.]/g, '').toUpperCase()
-    updateActiveSession({ letters: clean })
+  function renameSession(id, name) {
+    setSessions(prev => {
+      const next = prev.map(s => s.id === id ? { ...s, name } : s)
+      localStorage.setItem('sessions', JSON.stringify(next))
+      return next
+    })
+    setRenamingSession(null)
   }
 
-  const handlePosLettersChange = (val) => {
-    const clean = val.replace(/[^a-zA-Z.^$#@!]/g, '').toUpperCase()
-    updateActiveSession({ posLetters: clean })
+  const updateGameScore = (word, gameScore) => {
+    const next = saved.map(s => s.word === word ? { ...s, gameScore } : s)
+    updateActiveSession({ savedWords: next })
   }
 
-  useEffect(() => {
-    if (pendingLettersCursor.current !== null) {
-      lettersRef.current?.setSelectionRange(pendingLettersCursor.current, pendingLettersCursor.current)
-      pendingLettersCursor.current = null
-    }
-  }, [letters])
+  const toggleSaved = (wordObj) => {
+    const next = saved.some(s => s.word === wordObj.word)
+      ? saved.filter(s => s.word !== wordObj.word)
+      : [...saved, wordObj]
+    updateActiveSession({ savedWords: next })
+  }
 
-  useEffect(() => {
-    if (pendingPosLettersCursor.current !== null) {
-      posLettersRef.current?.setSelectionRange(pendingPosLettersCursor.current, pendingPosLettersCursor.current)
-      pendingPosLettersCursor.current = null
+  // Tile mutation helpers
+  function removeTile(row, index) {
+    if (row === 'rack') {
+      const next = [...rackTilesRef.current]
+      next.splice(index, 1)
+      updateActiveSession({ letters: rackToString(next) })
+    } else {
+      const next = [...patternTilesRef.current]
+      next.splice(index, 1)
+      updateActiveSession({ posLetters: patternToString(next) })
     }
-  }, [posLetters])
+  }
 
+  function commitDrop(dragState) {
+    const newRack    = [...rackTilesRef.current]
+    const newPattern = [...patternTilesRef.current]
+
+    // Remove from source
+    if (dragState.srcRow === 'rack') newRack.splice(dragState.srcIndex, 1)
+    else newPattern.splice(dragState.srcIndex, 1)
+
+    // When moving within the same row, the placeholder was counted in dropIndex,
+    // so we shift down by one to compensate.
+    let dropIdx = dragState.dropIndex
+    if (dragState.srcRow === dragState.dropRow && dropIdx > dragState.srcIndex) {
+      dropIdx--
+    }
+
+    if (dragState.dropRow === 'rack') {
+      dropIdx = Math.max(0, Math.min(dropIdx, newRack.length))
+      newRack.splice(dropIdx, 0, dragState.letter)
+    } else if (dragState.dropRow === 'pattern') {
+      if (dragState.letter === '^') dropIdx = 0
+      else if (dragState.letter === '$') dropIdx = newPattern.length
+      else dropIdx = Math.max(0, Math.min(dropIdx, newPattern.length))
+      newPattern.splice(dropIdx, 0, dragState.letter)
+    }
+
+    updateActiveSession({
+      letters:    rackToString(newRack),
+      posLetters: patternToString(newPattern),
+    })
+  }
+
+  // Keep refs to handlers so effects don't need them as deps
+  const dragHandlersRef = useRef({})
+  dragHandlersRef.current = { removeTile, commitDrop }
+
+  function handleTilePointerDown(e, row, index, letter) {
+    e.preventDefault()
+    setActiveRow(row)
+    const rect = e.currentTarget.getBoundingClientRect()
+    setDrag({
+      srcRow: row, srcIndex: index, letter,
+      pointerX: e.clientX, pointerY: e.clientY,
+      originX:  e.clientX, originY:  e.clientY,
+      offsetX:  e.clientX - rect.left,
+      offsetY:  e.clientY - rect.top,
+      tileW: rect.width, tileH: rect.height,
+      dropRow: null, dropIndex: null,
+    })
+  }
+
+  // Attach/detach document pointer listeners while a drag is active
+  useEffect(() => {
+    if (!drag) return
+
+    function onMove(e) {
+      const prev = dragRef.current
+      if (!prev) return
+
+      const rackRect = rackRowRef.current?.getBoundingClientRect()
+      const patRect  = patternRowRef.current?.getBoundingClientRect()
+
+      // Generous vertical hit zone (+/-20px) for easier mobile drop
+      const inRect = (rect, x, y) =>
+        rect &&
+        x >= rect.left && x <= rect.right &&
+        y >= rect.top - 20 && y <= rect.bottom + 20
+
+      let dropRow = null, dropIndex = null
+
+      // Anchors (^ $) can only land in the pattern row
+      if (prev.letter !== '^' && prev.letter !== '$' && inRect(rackRect, e.clientX, e.clientY)) {
+        dropRow = 'rack'
+      } else if (inRect(patRect, e.clientX, e.clientY)) {
+        dropRow = 'pattern'
+      }
+
+      if (dropRow !== null) {
+        const rowRef  = dropRow === 'rack' ? rackRowRef : patternRowRef
+        const tileEls = rowRef.current?.querySelectorAll('[data-tile]')
+        dropIndex = tileEls ? tileEls.length : 0
+        if (tileEls) {
+          for (let i = 0; i < tileEls.length; i++) {
+            const r = tileEls[i].getBoundingClientRect()
+            if (e.clientX < r.left + r.width / 2) {
+              dropIndex = i
+              break
+            }
+          }
+        }
+        // Clamp anchors to fixed positions
+        if (prev.letter === '^') dropIndex = 0
+        if (prev.letter === '$') dropIndex = patternTilesRef.current.length
+      }
+
+      setDrag(d => d ? { ...d, pointerX: e.clientX, pointerY: e.clientY, dropRow, dropIndex } : null)
+    }
+
+    function onUp(e) {
+      const prev = dragRef.current
+      if (!prev) return
+      setDrag(null)
+      const dx = Math.abs(e.clientX - prev.originX)
+      const dy = Math.abs(e.clientY - prev.originY)
+      if (dx < 6 && dy < 6) {
+        dragHandlersRef.current.removeTile(prev.srcRow, prev.srcIndex)
+      } else if (prev.dropRow !== null && prev.dropIndex !== null) {
+        dragHandlersRef.current.commitDrop(prev)
+      }
+    }
+
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+    return () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+    }
+  }, [!!drag]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-search whenever letters or pattern change
   useEffect(() => {
     if (!letters) {
       setResults([])
@@ -269,7 +438,7 @@ export default function LettersHelper() {
     }
     const available = letters.split('')
     const anchorStart = /^[\^#@]/.test(posLetters)
-    const anchorEnd = /[$!]$/.test(posLetters)
+    const anchorEnd   = /[$!]$/.test(posLetters)
     const patternCore = posLetters.replace(/^[\^#@]/, '').replace(/[$!]$/, '')
     const matched = WORDS
       .flatMap(w => {
@@ -293,77 +462,64 @@ export default function LettersHelper() {
     if (renamingSession) renameRef.current?.focus()
   }, [renamingSession])
 
-  function renameSession(id, name) {
-    setSessions(prev => {
-      const next = prev.map(s => s.id === id ? { ...s, name } : s)
-      localStorage.setItem('sessions', JSON.stringify(next))
-      return next
-    })
-    setRenamingSession(null)
-  }
-
-  const updateGameScore = (word, gameScore) => {
-    const next = saved.map(s => s.word === word ? { ...s, gameScore } : s)
-    updateActiveSession({ savedWords: next })
-  }
-
-  const toggleSaved = (wordObj) => {
-    const next = saved.some(s => s.word === wordObj.word)
-      ? saved.filter(s => s.word !== wordObj.word)
-      : [...saved, wordObj]
-    updateActiveSession({ savedWords: next })
-  }
-
   const handleReset = () => {
     updateActiveSession({ letters: '', posLetters: '', savedWords: [] })
     clearSearch()
-    lettersRef.current?.focus()
+    setActiveRow('rack')
   }
 
-  const handleVirtualKey = (key) => {
-    const isLetters = activeField === 'letters'
-    const value = isLetters ? letters : posLetters
-    const ref = isLetters ? lettersRef : posLettersRef
-    const setter = isLetters ? handleLettersChange : handlePosLettersChange
-    const pendingCursor = isLetters ? pendingLettersCursor : pendingPosLettersCursor
-
-    // ^ and $ are not valid in the letters field
-    if (key !== 'DEL' && key !== 'LEFT' && key !== 'RIGHT') {
-      if (isLetters && !/^[A-Z.]$/.test(key)) return
-    }
-
-    const el = ref.current
-    if (!el) return
-
-    el.focus()
-    const start = el.selectionStart ?? value.length
-    const end = el.selectionEnd ?? value.length
-
+  function handleVirtualKey(key) {
     if (key === 'DEL') {
-      if (start !== end) {
-        const newVal = value.slice(0, start) + value.slice(end)
-        pendingCursor.current = start
-        setter(newVal)
-      } else if (start > 0) {
-        const newVal = value.slice(0, start - 1) + value.slice(start)
-        pendingCursor.current = start - 1
-        setter(newVal)
+      if (activeRow === 'rack') {
+        if (rackTilesRef.current.length === 0) return
+        const next = [...rackTilesRef.current]
+        next.pop()
+        updateActiveSession({ letters: rackToString(next) })
+      } else {
+        if (patternTilesRef.current.length === 0) return
+        const next = [...patternTilesRef.current]
+        next.pop()
+        updateActiveSession({ posLetters: patternToString(next) })
       }
-    } else if (key === 'LEFT') {
-      const newPos = Math.max(0, start - 1)
-      el.setSelectionRange(newPos, newPos)
-    } else if (key === 'RIGHT') {
-      const newPos = Math.min(value.length, end + 1)
-      el.setSelectionRange(newPos, newPos)
-    } else {
-      const newVal = value.slice(0, start) + key + value.slice(end)
-      pendingCursor.current = start + 1
-      setter(newVal)
+    } else if (key === '^') {
+      if (patternTilesRef.current[0] === '^') return
+      updateActiveSession({ posLetters: patternToString(['^', ...patternTilesRef.current]) })
+    } else if (key === '$') {
+      const pat = patternTilesRef.current
+      if (pat[pat.length - 1] === '$') return
+      updateActiveSession({ posLetters: patternToString([...pat, '$']) })
+    } else if (/^[A-Z.]$/.test(key)) {
+      if (activeRow === 'rack') {
+        updateActiveSession({ letters: rackToString([...rackTilesRef.current, key]) })
+      } else {
+        const next = [...patternTilesRef.current]
+        // Insert before trailing $ if present
+        if (next[next.length - 1] === '$') next.splice(next.length - 1, 0, key)
+        else next.push(key)
+        updateActiveSession({ posLetters: patternToString(next) })
+      }
     }
   }
 
   return (
     <div>
+      {/* Ghost tile — follows pointer during drag */}
+      {drag && (
+        <div
+          style={{
+            position: 'fixed',
+            left: drag.pointerX - drag.offsetX,
+            top:  drag.pointerY - drag.offsetY,
+            width: drag.tileW, height: drag.tileH,
+            pointerEvents: 'none',
+            zIndex: 9999,
+            opacity: 0.85,
+          }}
+        >
+          <ScrabbleTile letter={drag.letter} score={SCORES[drag.letter] || 0} />
+        </div>
+      )}
+
       {/* Fixed top bar */}
       <div className="fixed top-10 left-0 right-0 z-20 bg-white border-b border-gray-200">
         <div className="max-w-lg mx-auto px-4 py-1 flex justify-between items-center">
@@ -429,10 +585,10 @@ export default function LettersHelper() {
         </div>
       </div>
 
-      {/* Main layout column: from below session strip to bottom of screen */}
+      {/* Main layout column */}
       <div className="fixed top-[6.75rem] bottom-0 left-0 right-0 flex flex-col">
 
-        {/* Input panel */}
+        {/* Tile input panel */}
         <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-2">
           <div className="max-w-lg mx-auto space-y-2">
             {showHelp && (
@@ -448,28 +604,38 @@ export default function LettersHelper() {
                 </ul>
               </div>
             )}
+
+            {/* Rack row */}
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-0.5">
-                Your letters
-              </label>
-              <input
-                ref={lettersRef}
-                autoFocus
-                type="text"
-                inputMode="none"
-                value={letters}
-                onChange={e => handleLettersChange(e.target.value)}
-                onFocus={() => setActiveField('letters')}
-                placeholder="e.g. DEROIBU"
-                className="w-full px-3 py-1.5 border-2 border-gray-300 rounded-lg text-base font-mono uppercase tracking-widest focus:outline-none focus:border-wordle-green"
-                autoCapitalize="characters"
-                autoCorrect="off"
-                autoComplete="off"
-                spellCheck="false"
-              />
+              <label className="block text-xs font-semibold text-gray-700 mb-0.5">Your letters</label>
+              <div
+                ref={rackRowRef}
+                onPointerDown={() => setActiveRow('rack')}
+                className={`flex flex-wrap gap-1 min-h-[2.75rem] px-1 py-1 rounded-lg border-2 transition-colors ${
+                  activeRow === 'rack' ? 'border-wordle-green' : 'border-gray-200'
+                }`}
+              >
+                {rackTiles.map((letter, i) => (
+                  <Fragment key={i}>
+                    {drag?.dropRow === 'rack' && drag?.dropIndex === i && <DropIndicator />}
+                    <div
+                      data-tile=""
+                      className="cursor-grab active:cursor-grabbing touch-none select-none"
+                      onPointerDown={e => handleTilePointerDown(e, 'rack', i, letter)}
+                    >
+                      <ScrabbleTile
+                        letter={letter}
+                        score={SCORES[letter] || 0}
+                        isDragging={drag?.srcRow === 'rack' && drag?.srcIndex === i}
+                      />
+                    </div>
+                  </Fragment>
+                ))}
+                {drag?.dropRow === 'rack' && drag?.dropIndex === rackTiles.length && <DropIndicator />}
+              </div>
               {letters.length > 0 && (() => {
                 const letterCount = letters.replace(/\./g, '').length
-                const blankCount = (letters.match(/\./g) || []).length
+                const blankCount  = (letters.match(/\./g) || []).length
                 const display = letterCount > 0 && blankCount > 0
                   ? `${letterCount} letter${letterCount !== 1 ? 's' : ''} + ${blankCount} blank${blankCount !== 1 ? 's' : ''}`
                   : blankCount > 0
@@ -478,24 +644,37 @@ export default function LettersHelper() {
                 return <p className="text-xs text-gray-400 mt-0.5">{display}</p>
               })()}
             </div>
+
+            {/* Pattern row */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-0.5">
                 Fixed pattern <span className="font-normal text-gray-400">(optional)</span>
               </label>
-              <input
-                ref={posLettersRef}
-                type="text"
-                inputMode="none"
-                value={posLetters}
-                onChange={e => handlePosLettersChange(e.target.value)}
-                onFocus={() => setActiveField('posLetters')}
-                placeholder="e.g. ^A or A.B or ER$"
-                className="w-full px-3 py-1.5 border-2 border-gray-300 rounded-lg text-base font-mono uppercase tracking-widest focus:outline-none focus:border-wordle-green"
-                autoCapitalize="characters"
-                autoCorrect="off"
-                autoComplete="off"
-                spellCheck="false"
-              />
+              <div
+                ref={patternRowRef}
+                onPointerDown={() => setActiveRow('pattern')}
+                className={`flex flex-wrap gap-1 min-h-[2.75rem] px-1 py-1 rounded-lg border-2 transition-colors ${
+                  activeRow === 'pattern' ? 'border-wordle-green' : 'border-gray-200'
+                }`}
+              >
+                {patternTiles.map((letter, i) => (
+                  <Fragment key={i}>
+                    {drag?.dropRow === 'pattern' && drag?.dropIndex === i && <DropIndicator />}
+                    <div
+                      data-tile=""
+                      className="cursor-grab active:cursor-grabbing touch-none select-none"
+                      onPointerDown={e => handleTilePointerDown(e, 'pattern', i, letter)}
+                    >
+                      <ScrabbleTile
+                        letter={letter}
+                        score={SCORES[letter] || 0}
+                        isDragging={drag?.srcRow === 'pattern' && drag?.srcIndex === i}
+                      />
+                    </div>
+                  </Fragment>
+                ))}
+                {drag?.dropRow === 'pattern' && drag?.dropIndex === patternTiles.length && <DropIndicator />}
+              </div>
             </div>
           </div>
         </div>
@@ -542,21 +721,14 @@ export default function LettersHelper() {
         {/* Virtual keyboard */}
         <div className="flex-shrink-0 border-t border-gray-100 py-2 px-2">
           <div className="max-w-lg mx-auto flex flex-col gap-1">
-            <div className="flex gap-1 px-[10%]">
-              <button onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey('LEFT')}
-                className="flex-[2] h-10 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500">
-                ←
-              </button>
+            {/* Special keys: anchors + blank */}
+            <div className="flex gap-1 px-[30%]">
               {['^', '.', '$'].map(key => (
                 <button key={key} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(key)}
-                  className="flex-1 h-10 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500">
+                  className="flex-1 h-8 bg-blue-100 text-blue-700 rounded text-sm font-bold hover:bg-blue-200 active:bg-blue-300">
                   {key}
                 </button>
               ))}
-              <button onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey('RIGHT')}
-                className="flex-[2] h-10 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500">
-                →
-              </button>
             </div>
             <div className="flex gap-1">
               {KB_ROW1.map(l => (
