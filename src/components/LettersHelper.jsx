@@ -257,6 +257,13 @@ export default function LettersHelper() {
   }
 
   function switchSession(id) {
+    setSessions(prev => {
+      const idx = prev.findIndex(s => s.id === id)
+      if (idx <= 0) return prev
+      const next = [prev[idx], ...prev.slice(0, idx), ...prev.slice(idx + 1)]
+      localStorage.setItem('sessions', JSON.stringify(next))
+      return next
+    })
     setActiveSessionId(id)
     localStorage.setItem('activeSessionId', id)
     clearSearch()
@@ -279,7 +286,11 @@ export default function LettersHelper() {
 
   function renameSession(id, name) {
     setSessions(prev => {
-      const next = prev.map(s => s.id === id ? { ...s, name } : s)
+      const idx = prev.findIndex(s => s.id === id)
+      const updated = { ...prev[idx], name }
+      const next = idx > 0
+        ? [updated, ...prev.slice(0, idx), ...prev.slice(idx + 1)]
+        : prev.map(s => s.id === id ? { ...s, name } : s)
       localStorage.setItem('sessions', JSON.stringify(next))
       return next
     })
@@ -315,14 +326,14 @@ export default function LettersHelper() {
     const newRack    = [...rackTilesRef.current]
     const newPattern = [...patternTilesRef.current]
 
-    // Remove from source
+    // Remove from source (keyboard drags have no source tile to remove)
     if (dragState.srcRow === 'rack') newRack.splice(dragState.srcIndex, 1)
-    else newPattern.splice(dragState.srcIndex, 1)
+    else if (dragState.srcRow === 'pattern') newPattern.splice(dragState.srcIndex, 1)
 
     // When moving within the same row, the placeholder was counted in dropIndex,
-    // so we shift down by one to compensate.
+    // so we shift down by one to compensate. (Not applicable for keyboard source.)
     let dropIdx = dragState.dropIndex
-    if (dragState.srcRow === dragState.dropRow && dropIdx > dragState.srcIndex) {
+    if (dragState.srcRow !== 'keyboard' && dragState.srcRow === dragState.dropRow && dropIdx > dragState.srcIndex) {
       dropIdx--
     }
 
@@ -344,7 +355,7 @@ export default function LettersHelper() {
 
   // Keep refs to handlers so effects don't need them as deps
   const dragHandlersRef = useRef({})
-  dragHandlersRef.current = { removeTile, commitDrop }
+  dragHandlersRef.current = { removeTile, commitDrop, handleVirtualKey: (...args) => handleVirtualKey(...args) }
 
   function handleTilePointerDown(e, row, index, letter) {
     e.preventDefault()
@@ -357,6 +368,19 @@ export default function LettersHelper() {
       offsetX:  e.clientX - rect.left,
       offsetY:  e.clientY - rect.top,
       tileW: rect.width, tileH: rect.height,
+      dropRow: null, dropIndex: null,
+    })
+  }
+
+  function handleKeyboardPointerDown(e, letter) {
+    e.preventDefault()
+    const tileW = 32, tileH = 40
+    setDrag({
+      srcRow: 'keyboard', srcIndex: -1, letter,
+      pointerX: e.clientX, pointerY: e.clientY,
+      originX:  e.clientX, originY:  e.clientY,
+      offsetX:  tileW / 2, offsetY:  tileH / 2,
+      tileW, tileH,
       dropRow: null, dropIndex: null,
     })
   }
@@ -415,7 +439,11 @@ export default function LettersHelper() {
       const dx = Math.abs(e.clientX - prev.originX)
       const dy = Math.abs(e.clientY - prev.originY)
       if (dx < 6 && dy < 6) {
-        dragHandlersRef.current.removeTile(prev.srcRow, prev.srcIndex)
+        if (prev.srcRow === 'keyboard') {
+          dragHandlersRef.current.handleVirtualKey(prev.letter)
+        } else {
+          dragHandlersRef.current.removeTile(prev.srcRow, prev.srcIndex)
+        }
       } else if (prev.dropRow !== null && prev.dropIndex !== null) {
         dragHandlersRef.current.commitDrop(prev)
       }
@@ -721,40 +749,45 @@ export default function LettersHelper() {
         {/* Virtual keyboard */}
         <div className="flex-shrink-0 border-t border-gray-100 py-2 px-2">
           <div className="max-w-lg mx-auto flex flex-col gap-1">
-            {/* Special keys: anchors + blank */}
+            {/* Special keys: anchors + blank — draggable into rows */}
             <div className="flex gap-1 px-[30%]">
               {['^', '.', '$'].map(key => (
-                <button key={key} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(key)}
-                  className="flex-1 h-8 bg-blue-100 text-blue-700 rounded text-sm font-bold hover:bg-blue-200 active:bg-blue-300">
+                <button key={key}
+                  onPointerDown={e => handleKeyboardPointerDown(e, key)}
+                  className="flex-1 h-8 bg-blue-100 text-blue-700 rounded text-sm font-bold hover:bg-blue-200 active:bg-blue-300 touch-none select-none">
                   {key}
                 </button>
               ))}
             </div>
             <div className="flex gap-1">
               {KB_ROW1.map(l => (
-                <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
-                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+                <button key={l}
+                  onPointerDown={e => handleKeyboardPointerDown(e, l)}
+                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400 touch-none select-none">
                   {l}
                 </button>
               ))}
             </div>
             <div className="flex gap-1 px-[5%]">
               {KB_ROW2.map(l => (
-                <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
-                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+                <button key={l}
+                  onPointerDown={e => handleKeyboardPointerDown(e, l)}
+                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400 touch-none select-none">
                   {l}
                 </button>
               ))}
             </div>
             <div className="flex gap-1">
               {KB_ROW3.map(l => (
-                <button key={l} onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey(l)}
-                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400">
+                <button key={l}
+                  onPointerDown={e => handleKeyboardPointerDown(e, l)}
+                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400 touch-none select-none">
                   {l}
                 </button>
               ))}
-              <button onPointerDown={e => e.preventDefault()} onClick={() => handleVirtualKey('DEL')}
-                className="flex-[1.5] h-10 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500">
+              <button
+                onPointerDown={e => { e.preventDefault(); handleVirtualKey('DEL') }}
+                className="flex-[1.5] h-10 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500 touch-none select-none">
                 ⌫
               </button>
             </div>
