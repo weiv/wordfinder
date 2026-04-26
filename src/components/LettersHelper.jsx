@@ -457,6 +457,29 @@ export default function LettersHelper() {
     }
   }, [!!drag]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Physical keyboard input — append to active row
+  useEffect(() => {
+    function onKey(e) {
+      // Ignore when typing into a session name input
+      const tag = document.activeElement?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+
+      if (e.key === 'Backspace') {
+        e.preventDefault()
+        handleVirtualKey('DEL')
+      } else if (e.key === '^' || e.key === '$' || e.key === '.') {
+        e.preventDefault()
+        handleVirtualKey(e.key)
+      } else if (/^[a-zA-Z]$/.test(e.key)) {
+        e.preventDefault()
+        handleVirtualKey(e.key.toUpperCase())
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [activeRow])
+
   // Auto-search whenever letters or pattern change
   useEffect(() => {
     if (!letters) {
