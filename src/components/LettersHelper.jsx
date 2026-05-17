@@ -326,14 +326,13 @@ export default function LettersHelper() {
     const newRack    = [...rackTilesRef.current]
     const newPattern = [...patternTilesRef.current]
 
-    // Remove from source (keyboard drags have no source tile to remove)
     if (dragState.srcRow === 'rack') newRack.splice(dragState.srcIndex, 1)
     else if (dragState.srcRow === 'pattern') newPattern.splice(dragState.srcIndex, 1)
 
     // When moving within the same row, the placeholder was counted in dropIndex,
-    // so we shift down by one to compensate. (Not applicable for keyboard source.)
+    // so we shift down by one to compensate.
     let dropIdx = dragState.dropIndex
-    if (dragState.srcRow !== 'keyboard' && dragState.srcRow === dragState.dropRow && dropIdx > dragState.srcIndex) {
+    if (dragState.srcRow === dragState.dropRow && dropIdx > dragState.srcIndex) {
       dropIdx--
     }
 
@@ -355,7 +354,7 @@ export default function LettersHelper() {
 
   // Keep refs to handlers so effects don't need them as deps
   const dragHandlersRef = useRef({})
-  dragHandlersRef.current = { removeTile, commitDrop, handleVirtualKey: (...args) => handleVirtualKey(...args) }
+  dragHandlersRef.current = { removeTile, commitDrop }
 
   function handleTilePointerDown(e, row, index, letter) {
     e.preventDefault()
@@ -368,19 +367,6 @@ export default function LettersHelper() {
       offsetX:  e.clientX - rect.left,
       offsetY:  e.clientY - rect.top,
       tileW: rect.width, tileH: rect.height,
-      dropRow: null, dropIndex: null,
-    })
-  }
-
-  function handleKeyboardPointerDown(e, letter) {
-    e.preventDefault()
-    const tileW = 32, tileH = 40
-    setDrag({
-      srcRow: 'keyboard', srcIndex: -1, letter,
-      pointerX: e.clientX, pointerY: e.clientY,
-      originX:  e.clientX, originY:  e.clientY,
-      offsetX:  tileW / 2, offsetY:  tileH / 2,
-      tileW, tileH,
       dropRow: null, dropIndex: null,
     })
   }
@@ -439,11 +425,7 @@ export default function LettersHelper() {
       const dx = Math.abs(e.clientX - prev.originX)
       const dy = Math.abs(e.clientY - prev.originY)
       if (dx < 6 && dy < 6) {
-        if (prev.srcRow === 'keyboard') {
-          dragHandlersRef.current.handleVirtualKey(prev.letter)
-        } else {
-          dragHandlersRef.current.removeTile(prev.srcRow, prev.srcIndex)
-        }
+        dragHandlersRef.current.removeTile(prev.srcRow, prev.srcIndex)
       } else if (prev.dropRow !== null && prev.dropIndex !== null) {
         dragHandlersRef.current.commitDrop(prev)
       }
@@ -571,8 +553,11 @@ export default function LettersHelper() {
         </div>
       )}
 
-      {/* Fixed top bar */}
-      <div className="fixed top-10 left-0 right-0 z-20 bg-white border-b border-gray-200">
+      {/* Single fixed column below the top nav */}
+      <div className="fixed top-10 bottom-0 left-0 right-0 flex flex-col bg-white">
+
+      {/* Top bar */}
+      <div className="flex-shrink-0 border-b border-gray-200">
         <div className="max-w-lg mx-auto px-4 py-1 flex justify-between items-center">
           <button
             onClick={() => setShowHelp(h => !h)}
@@ -586,9 +571,9 @@ export default function LettersHelper() {
         </div>
       </div>
 
-      {/* Session strip */}
-      <div className="fixed top-[4.5rem] left-0 right-0 z-20 bg-white border-b border-gray-200">
-        <div className="flex items-center gap-1.5 overflow-x-auto px-3 py-1.5 max-w-lg mx-auto">
+      {/* Session strip — wraps to multiple rows */}
+      <div className="flex-shrink-0 border-b border-gray-200">
+        <div className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 max-w-lg mx-auto">
           {sessions.map(s => (
             renamingSession === s.id ? (
               <input key={s.id} ref={renameRef} value={renameName}
@@ -635,9 +620,6 @@ export default function LettersHelper() {
           )}
         </div>
       </div>
-
-      {/* Main layout column */}
-      <div className="fixed top-[6.75rem] bottom-0 left-0 right-0 flex flex-col">
 
         {/* Tile input panel */}
         <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-2">
@@ -770,14 +752,14 @@ export default function LettersHelper() {
         </div>
 
         {/* Virtual keyboard */}
-        <div className="flex-shrink-0 border-t border-gray-100 py-2 px-2">
+        <div className="flex-shrink-0 border-t border-gray-100 pt-2 px-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <div className="max-w-lg mx-auto flex flex-col gap-1">
-            {/* Special keys: anchors + blank — draggable into rows */}
+            {/* Special keys: anchors + blank */}
             <div className="flex gap-1 px-[30%]">
               {['^', '.', '$'].map(key => (
                 <button key={key}
-                  onPointerDown={e => handleKeyboardPointerDown(e, key)}
-                  className="flex-1 h-8 bg-blue-100 text-blue-700 rounded text-sm font-bold hover:bg-blue-200 active:bg-blue-300 touch-none select-none">
+                  onClick={() => handleVirtualKey(key)}
+                  className="flex-1 h-8 bg-blue-100 text-blue-700 rounded text-sm font-bold hover:bg-blue-200 active:bg-blue-300 select-none">
                   {key}
                 </button>
               ))}
@@ -785,8 +767,8 @@ export default function LettersHelper() {
             <div className="flex gap-1">
               {KB_ROW1.map(l => (
                 <button key={l}
-                  onPointerDown={e => handleKeyboardPointerDown(e, l)}
-                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400 touch-none select-none">
+                  onClick={() => handleVirtualKey(l)}
+                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400 select-none">
                   {l}
                 </button>
               ))}
@@ -794,8 +776,8 @@ export default function LettersHelper() {
             <div className="flex gap-1 px-[5%]">
               {KB_ROW2.map(l => (
                 <button key={l}
-                  onPointerDown={e => handleKeyboardPointerDown(e, l)}
-                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400 touch-none select-none">
+                  onClick={() => handleVirtualKey(l)}
+                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400 select-none">
                   {l}
                 </button>
               ))}
@@ -803,14 +785,14 @@ export default function LettersHelper() {
             <div className="flex gap-1">
               {KB_ROW3.map(l => (
                 <button key={l}
-                  onPointerDown={e => handleKeyboardPointerDown(e, l)}
-                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400 touch-none select-none">
+                  onClick={() => handleVirtualKey(l)}
+                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400 select-none">
                   {l}
                 </button>
               ))}
               <button
-                onPointerDown={e => { e.preventDefault(); handleVirtualKey('DEL') }}
-                className="flex-[1.5] h-10 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500 touch-none select-none">
+                onClick={() => handleVirtualKey('DEL')}
+                className="flex-[1.5] h-10 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500 select-none">
                 ⌫
               </button>
             </div>

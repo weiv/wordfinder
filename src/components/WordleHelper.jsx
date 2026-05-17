@@ -274,7 +274,7 @@ export default function WordleHelper() {
           </div>
 
           {/* Keyboard */}
-          <div className="flex flex-col gap-1 py-2 border-t border-gray-100">
+          <div className="flex flex-col gap-1 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] border-t border-gray-100">
             <div className="flex gap-1">
               {'QWERTYUIOP'.split('').map(l => (
                 <button key={l} onClick={() => handleVirtualKey(l)}
