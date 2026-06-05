@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { WORDS } from '../data/words'
+import { byLength } from '../data/words'
 import WordResults from './WordResults'
 
 export default function CrosswordHelper() {
@@ -31,8 +31,7 @@ export default function CrosswordHelper() {
 
     const required = mustInclude.toUpperCase().replace(/[^A-Z]/g, '').split('')
 
-    const matched = WORDS.filter(w => {
-      if (w.length !== raw.length) return false
+    const matched = (byLength[raw.length] || []).filter(w => {
       if (!regex.test(w)) return false
       for (const l of required) {
         if (!w.includes(l)) return false

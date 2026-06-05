@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { WORDS } from '../data/words'
+import { byLength } from '../data/words'
 import WordResults from './WordResults'
 
 const WORD_LEN = 5
@@ -122,8 +122,7 @@ export default function WordleHelper() {
     // Remove from excluded any letter that's required (gray can overlap with green/yellow in multi-instance scenarios)
     for (const l of required) excluded.delete(l)
 
-    const matched = WORDS.filter(w => {
-      if (w.length !== WORD_LEN) return false
+    const matched = (byLength[WORD_LEN] || []).filter(w => {
       // Check greens
       for (let i = 0; i < WORD_LEN; i++) {
         if (greens[i] && w[i] !== greens[i]) return false

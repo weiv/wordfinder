@@ -20,7 +20,7 @@ This is a single-page React app built with Vite, Tailwind CSS, and no backend �
 
 **Mode switching:** `App.jsx` holds a single `mode` state (`'wordle'` | `'crossword'`) and renders either `WordleHelper` or `CrosswordHelper`. The `Header` component owns the tab UI that drives this toggle.
 
-**Word data:** `src/data/words.js` exports a single `WORDS` array (uppercase strings, lengths 3–10). All filtering in both helpers imports and iterates this array directly — no server calls, no indexing at runtime beyond what JS does inline. A `byLength` map is also exported but currently unused by the helpers.
+**Word data:** `src/data/words.js` holds the Collins/SOWPODS word-game dictionary (A–Z only, lengths 3–15). The words are stored as a single space-joined string and split into the exported `WORDS` array at load. It also exports a `byLength` map (word length → array of words); both helpers filter through `byLength[len]` so each search only scans words of the right length. Regenerate from a SOWPODS source if coverage needs updating.
 
 **WordleHelper** (`src/components/WordleHelper.jsx`): Manages a 6×5 grid of `{ letter, state }` cells. Cell states cycle through `empty → green → yellow → gray` on click. On search, it extracts green (exact position), yellow (present, wrong position), and gray (excluded) constraints and filters `WORDS` accordingly. Supports both physical keyboard input and an on-screen QWERTY keyboard for mobile.
 
