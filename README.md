@@ -28,22 +28,38 @@ bun dev            # = vite --host, reachable at http://rasp5.local:5173
 
 ```bash
 bun run build              # outputs static files to dist/
-bun run preview -- --host  # serves dist/ at http://rasp5.local:4173
+bun run preview -- --host  # serves dist/ over the network
 ```
 
 The `preview` script doesn't include `--host` by default, so pass it through (the `--`
-forwards the flag to Vite) or it will only bind to localhost and won't be reachable as
-`rasp5.local`. The hostnames `rasp5.local` and `words.weivco.com` are whitelisted in
-`vite.config.js` under `server.allowedHosts`.
+forwards the flag to Vite) or it will only bind to localhost. The hostnames
+`rasp5.local` and `words.weivco.com` are whitelisted in `vite.config.js` under
+`server.allowedHosts`.
 
-`vite preview` is a dev-grade static server. For a stable always-on deployment, build
-`dist/` and serve it with a real static server (nginx, Caddy, or `npx serve dist`),
-keeping it running across reboots via systemd or pm2.
+`vite preview` serves a snapshot of `dist/` taken at startup, so a rebuild is **not**
+picked up until the process is restarted.
 
-### Public access via Cloudflare Tunnel
+## Deploying (rasp5.local)
 
-The public site at `words.weivco.com` is exposed through a [Cloudflare
-Tunnel](https://developers.cloudflare.com/cloudflare-tunnel/) (`cloudflared`) running
-on the Pi, which forwards the hostname to the local server (hence `words.weivco.com`
-being whitelisted in `vite.config.js`). Point the tunnel's ingress at whichever local
-port is serving the app (e.g. `4173` for `vite preview`, or your static server's port).
+The production site at `words.weivco.com` runs on the Pi as follows:
+
+- A systemd service, **`wordfinder.service`**, runs `vite preview --host --port 5173`,
+  serving the built `dist/`.
+- **Cloudflare Tunnel** (`cloudflared`, `/etc/cloudflared/config.yml`) forwards
+  `words.weivco.com` to that local port. Caddy and nginx also run on the box for other
+  services and aren't involved in serving this app.
+
+Because `vite preview` holds a snapshot of `dist/`, deploying a change is rebuild +
+restart:
+
+```bash
+cd ~/src/wordfinder
+git checkout main && git pull origin main
+bun install                          # only if dependencies changed
+bun run build                        # regenerate dist/
+sudo systemctl restart wordfinder    # make preview pick up the new dist/
+```
+
+`bun run build` on its own is not enough — without the restart, `vite preview` keeps
+serving the old build. Inspect the service with `systemctl cat wordfinder` or
+`systemctl status wordfinder`.
