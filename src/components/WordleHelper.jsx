@@ -183,7 +183,13 @@ export default function WordleHelper() {
   }, [activeCell.row])
 
   const handleWordClick = useCallback((word) => {
-    const rowIndex = grid.findIndex(row => row.every(cell => cell.letter === ''))
+    // If the user has started typing in the active row (some letters, still room),
+    // drop the word there. Otherwise fall back to the first fully-empty row.
+    const activeRow = grid[activeCell.row]
+    const isTyping = activeRow.some(c => c.letter) && activeRow.some(c => !c.letter)
+    const rowIndex = isTyping
+      ? activeCell.row
+      : grid.findIndex(row => row.every(cell => cell.letter === ''))
     if (rowIndex === -1) return
     setGrid(prev => {
       const next = prev.map(r => r.map(c => ({ ...c })))
@@ -194,7 +200,7 @@ export default function WordleHelper() {
     })
     setActiveCell({ row: rowIndex, col: 0 })
     containerRef.current?.focus()
-  }, [grid])
+  }, [grid, activeCell])
 
   const handleReset = useCallback(() => {
     const empty = emptyGrid()
