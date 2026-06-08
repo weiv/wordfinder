@@ -61,7 +61,7 @@ function matchPattern(word, patternCore, anchorStart, anchorEnd, available) {
 }
 
 // variant: 'prominent' (saved section) | 'saved' (result, in saved) | 'normal' (result, not saved)
-function WordCard({ word, score, blanksCover, variant, onClick,
+function WordCard({ word, score, blanksCover, variant, usesAll, onClick,
                     onRemove, onScoreDown, onScoreUp }) {
   const blanksLeft = {}
   for (const l of blanksCover) blanksLeft[l] = (blanksLeft[l] || 0) + 1
@@ -92,17 +92,22 @@ function WordCard({ word, score, blanksCover, variant, onClick,
 
   const blanksLeft2 = {}
   for (const l of blanksCover) blanksLeft2[l] = (blanksLeft2[l] || 0) + 1
+  // A word that uses every rack tile (a "bingo") is highlighted red.
+  const cardClass = usesAll
+    ? 'bg-red-50 border-red-400'
+    : variant === 'saved' ? 'bg-green-50 border-wordle-green' : 'bg-white border-gray-300 hover:border-wordle-green'
+  const letterClass = usesAll ? 'text-red-600' : 'text-gray-800'
+  const blankClass  = usesAll ? 'text-red-300' : 'text-gray-400'
+  const scoreClass  = usesAll ? 'text-red-500' : 'text-wordle-green'
   return (
-    <button onClick={onClick} className={`flex items-center gap-1 px-3 py-1 rounded-md shadow-sm border transition-colors ${
-      variant === 'saved' ? 'bg-green-50 border-wordle-green' : 'bg-white border-gray-300 hover:border-wordle-green'
-    }`}>
+    <button onClick={onClick} className={`flex items-center gap-1 px-3 py-1 rounded-md shadow-sm border transition-colors ${cardClass}`}>
       <span className="text-sm font-mono font-semibold tracking-wider uppercase">
         {word.split('').map((c, i) => {
-          if (blanksLeft2[c] > 0) { blanksLeft2[c]--; return <span key={i} className="text-gray-400">{c}</span> }
-          return <span key={i} className="text-gray-800">{c}</span>
+          if (blanksLeft2[c] > 0) { blanksLeft2[c]--; return <span key={i} className={blankClass}>{c}</span> }
+          return <span key={i} className={letterClass}>{c}</span>
         })}
       </span>
-      <span className="text-xs font-bold text-wordle-green">{score}</span>
+      <span className={`text-xs font-bold ${scoreClass}`}>{score}</span>
     </button>
   )
 }
@@ -473,6 +478,7 @@ export default function LettersHelper() {
     const anchorStart = /^[\^#@]/.test(posLetters)
     const anchorEnd   = /[$!]$/.test(posLetters)
     const patternCore = posLetters.replace(/^[\^#@]/, '').replace(/[$!]$/, '')
+    const fixedCount = patternCore.replace(/\./g, '').length // board letters, not from rack
     const matched = WORDS
       .flatMap(w => {
         const blanksCover = patternCore
@@ -480,7 +486,9 @@ export default function LettersHelper() {
           : canForm(w, available)
         if (blanksCover === null) return []
         const blankDeduction = blanksCover.reduce((sum, l) => sum + (SCORES[l] || 0), 0)
-        return [{ word: w, score: scrabbleScore(w) - blankDeduction, blanksCover }]
+        // "Bingo": the word consumes every tile in the rack
+        const usesAll = w.length - fixedCount === available.length
+        return [{ word: w, score: scrabbleScore(w) - blankDeduction, blanksCover, usesAll }]
       })
       .sort((a, b) => b.score - a.score || a.word.localeCompare(b.word))
     setResults(matched)
@@ -739,8 +747,9 @@ export default function LettersHelper() {
                 </p>
                 {results.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {results.map(({ word, score, blanksCover }) => (
+                    {results.map(({ word, score, blanksCover, usesAll }) => (
                       <WordCard key={word} word={word} score={score} blanksCover={blanksCover}
+                        usesAll={usesAll}
                         variant={savedSet.has(word) ? 'saved' : 'normal'}
                         onClick={() => toggleSaved({ word, score, blanksCover })} />
                     ))}
