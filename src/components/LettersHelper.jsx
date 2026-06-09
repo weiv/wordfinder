@@ -77,14 +77,18 @@ function WordCard({ word, score, blanksCover, variant, usesAll, onClick,
 
   if (variant === 'prominent') {
     return (
-      <div className="flex-shrink-0 flex items-center gap-1 px-1.5 py-1 rounded-md shadow-sm border bg-wordle-green border-wordle-green">
+      <div className="flex-shrink-0 flex items-center gap-1 pl-2 pr-0.5 py-0.5 rounded-md shadow-sm border bg-wordle-green border-wordle-green">
         <button onClick={onRemove} className="flex items-center">
           {wordLetters}
         </button>
-        <div className="flex items-center gap-0">
-          <button onClick={onScoreDown} className="text-green-200 text-xs leading-none px-0.5 active:opacity-60">▼</button>
-          <span className="text-xs font-bold text-green-200 min-w-[1.5rem] text-center">{score}</span>
-          <button onClick={onScoreUp} className="text-green-200 text-xs leading-none px-0.5 active:opacity-60">▲</button>
+        <div className="flex items-center gap-0.5">
+          <button onClick={onScoreDown} aria-label="Decrease score"
+            className="w-7 h-7 flex items-center justify-center rounded text-green-100 text-base leading-none select-none active:bg-black/20"
+            style={{ touchAction: 'manipulation' }}>▼</button>
+          <span className="text-sm font-bold text-white min-w-[1.5rem] text-center">{score}</span>
+          <button onClick={onScoreUp} aria-label="Increase score"
+            className="w-7 h-7 flex items-center justify-center rounded text-green-100 text-base leading-none select-none active:bg-black/20"
+            style={{ touchAction: 'manipulation' }}>▲</button>
         </div>
       </div>
     )
