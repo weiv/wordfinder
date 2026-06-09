@@ -584,15 +584,15 @@ export default function LettersHelper() {
 
       {/* Top bar */}
       <div className="flex-shrink-0 border-b border-gray-200">
-        <div className="max-w-lg mx-auto px-4 py-1 flex justify-between items-center">
+        <div className="max-w-lg mx-auto px-4 py-0.5 flex justify-between items-center">
           <button
             onClick={() => setShowHelp(h => !h)}
-            className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${showHelp ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}
+            className={`w-7 h-7 rounded-full text-xs font-bold transition-colors ${showHelp ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}
             aria-label="Toggle help"
           >?</button>
           <button
             onClick={handleReset}
-            className="px-6 h-9 bg-gray-200 text-gray-600 text-sm font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
+            className="px-6 h-7 bg-gray-200 text-gray-600 text-xs font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
           >Reset</button>
         </div>
       </div>
@@ -666,17 +666,15 @@ export default function LettersHelper() {
 
             {/* Rack row */}
             <div>
-              <div className="flex items-center justify-between mb-0.5">
-                <label className="text-xs font-semibold text-gray-700">Your letters</label>
-                {letters.length > 0 && <ClearButton onClick={() => updateActiveSession({ letters: '' })} />}
-              </div>
-              <div
-                ref={rackRowRef}
-                onPointerDown={() => setActiveRow('rack')}
-                className={`flex flex-wrap gap-1 min-h-[2.75rem] px-1 py-1 rounded-lg border-2 transition-colors ${
-                  activeRow === 'rack' ? 'border-wordle-green' : 'border-gray-200'
-                }`}
-              >
+              <label className="block text-xs font-semibold text-gray-700 mb-0.5">Your letters</label>
+              <div className="flex items-center gap-2">
+                <div
+                  ref={rackRowRef}
+                  onPointerDown={() => setActiveRow('rack')}
+                  className={`flex-1 flex flex-wrap gap-1 min-h-[2.75rem] px-1 py-1 rounded-lg border-2 transition-colors ${
+                    activeRow === 'rack' ? 'border-wordle-green' : 'border-gray-200'
+                  }`}
+                >
                 {rackTiles.map((letter, i) => (
                   <Fragment key={i}>
                     {drag?.dropRow === 'rack' && drag?.dropIndex === i && <DropIndicator />}
@@ -694,6 +692,8 @@ export default function LettersHelper() {
                   </Fragment>
                 ))}
                 {drag?.dropRow === 'rack' && drag?.dropIndex === rackTiles.length && <DropIndicator />}
+                </div>
+                {letters.length > 0 && <ClearButton onClick={() => updateActiveSession({ letters: '' })} />}
               </div>
               {letters.length > 0 && (() => {
                 const letterCount = letters.replace(/\./g, '').length
@@ -709,19 +709,17 @@ export default function LettersHelper() {
 
             {/* Pattern row */}
             <div>
-              <div className="flex items-center justify-between mb-0.5">
-                <label className="text-xs font-semibold text-gray-700">
-                  Fixed pattern <span className="font-normal text-gray-400">(optional)</span>
-                </label>
-                {patternTiles.length > 0 && <ClearButton onClick={() => updateActiveSession({ posLetters: '' })} />}
-              </div>
-              <div
-                ref={patternRowRef}
-                onPointerDown={() => setActiveRow('pattern')}
-                className={`flex flex-wrap gap-1 min-h-[2.75rem] px-1 py-1 rounded-lg border-2 transition-colors ${
-                  activeRow === 'pattern' ? 'border-wordle-green' : 'border-gray-200'
-                }`}
-              >
+              <label className="block text-xs font-semibold text-gray-700 mb-0.5">
+                Fixed pattern <span className="font-normal text-gray-400">(optional)</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <div
+                  ref={patternRowRef}
+                  onPointerDown={() => setActiveRow('pattern')}
+                  className={`flex-1 flex flex-wrap gap-1 min-h-[2.75rem] px-1 py-1 rounded-lg border-2 transition-colors ${
+                    activeRow === 'pattern' ? 'border-wordle-green' : 'border-gray-200'
+                  }`}
+                >
                 {patternTiles.map((letter, i) => (
                   <Fragment key={i}>
                     {drag?.dropRow === 'pattern' && drag?.dropIndex === i && <DropIndicator />}
@@ -739,6 +737,8 @@ export default function LettersHelper() {
                   </Fragment>
                 ))}
                 {drag?.dropRow === 'pattern' && drag?.dropIndex === patternTiles.length && <DropIndicator />}
+                </div>
+                {patternTiles.length > 0 && <ClearButton onClick={() => updateActiveSession({ posLetters: '' })} />}
               </div>
             </div>
           </div>

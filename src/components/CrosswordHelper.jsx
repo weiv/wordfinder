@@ -58,15 +58,15 @@ export default function CrosswordHelper() {
   return (
     <div>
       <div className="fixed top-10 left-0 right-0 z-20 bg-white border-b border-gray-200">
-        <div className="max-w-lg mx-auto px-4 py-1 flex justify-between items-center">
+        <div className="max-w-lg mx-auto px-4 py-0.5 flex justify-between items-center">
           <button
             onClick={() => setShowHelp(h => !h)}
-            className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${showHelp ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}
+            className={`w-7 h-7 rounded-full text-xs font-bold transition-colors ${showHelp ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}
             aria-label="Toggle help"
           >?</button>
           <button
             onClick={handleReset}
-            className="px-6 h-9 bg-gray-200 text-gray-600 text-sm font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
+            className="px-6 h-7 bg-gray-200 text-gray-600 text-xs font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
           >Reset</button>
         </div>
       </div>
