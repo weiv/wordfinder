@@ -77,7 +77,7 @@ function WordCard({ word, score, blanksCover, variant, usesAll, onClick,
 
   if (variant === 'prominent') {
     return (
-      <div className="flex items-center gap-1 px-1.5 py-1 rounded-md shadow-sm border bg-wordle-green border-wordle-green">
+      <div className="flex-shrink-0 flex items-center gap-1 px-1.5 py-1 rounded-md shadow-sm border bg-wordle-green border-wordle-green">
         <button onClick={onRemove} className="flex items-center">
           {wordLetters}
         </button>
@@ -191,6 +191,16 @@ function DropIndicator() {
       className="self-center rounded flex-shrink-0"
       style={{ width: 2, height: 40, background: '#6aaa64', pointerEvents: 'none' }}
     />
+  )
+}
+
+// Small per-section clear button
+function ClearButton({ onClick }) {
+  return (
+    <button onClick={onClick}
+      className="flex-shrink-0 px-2 h-6 rounded-full bg-gray-200 text-gray-500 text-xs font-semibold hover:bg-gray-300 active:bg-gray-400 transition-colors">
+      Clear
+    </button>
   )
 }
 
@@ -574,7 +584,7 @@ export default function LettersHelper() {
           >?</button>
           <button
             onClick={handleReset}
-            className="px-3 h-6 bg-gray-200 text-gray-500 text-xs font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
+            className="px-6 h-9 bg-gray-200 text-gray-600 text-sm font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
           >Reset</button>
         </div>
       </div>
@@ -648,7 +658,10 @@ export default function LettersHelper() {
 
             {/* Rack row */}
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-0.5">Your letters</label>
+              <div className="flex items-center justify-between mb-0.5">
+                <label className="text-xs font-semibold text-gray-700">Your letters</label>
+                {letters.length > 0 && <ClearButton onClick={() => updateActiveSession({ letters: '' })} />}
+              </div>
               <div
                 ref={rackRowRef}
                 onPointerDown={() => setActiveRow('rack')}
@@ -688,9 +701,12 @@ export default function LettersHelper() {
 
             {/* Pattern row */}
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-0.5">
-                Fixed pattern <span className="font-normal text-gray-400">(optional)</span>
-              </label>
+              <div className="flex items-center justify-between mb-0.5">
+                <label className="text-xs font-semibold text-gray-700">
+                  Fixed pattern <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                {patternTiles.length > 0 && <ClearButton onClick={() => updateActiveSession({ posLetters: '' })} />}
+              </div>
               <div
                 ref={patternRowRef}
                 onPointerDown={() => setActiveRow('pattern')}
@@ -720,24 +736,31 @@ export default function LettersHelper() {
           </div>
         </div>
 
+        {/* Saved — fixed row, stays visible while results scroll */}
+        {saved.length > 0 && (
+          <div className="flex-shrink-0 bg-white border-b border-gray-200">
+            <div className="max-w-lg mx-auto px-4 py-2">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-sm font-semibold text-gray-700">Saved</p>
+                <ClearButton onClick={() => updateActiveSession({ savedWords: [] })} />
+              </div>
+              <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
+                {saved.map(({ word, score, blanksCover, gameScore }) => (
+                  <WordCard key={word} word={word} score={gameScore ?? score} blanksCover={blanksCover}
+                    variant="prominent"
+                    onRemove={() => toggleSaved({ word, score, blanksCover, gameScore })}
+                    onScoreDown={() => updateGameScore(word, (gameScore ?? score) - 1)}
+                    onScoreUp={() => updateGameScore(word, (gameScore ?? score) + 1)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Scrollable candidates */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-lg mx-auto px-4 py-2">
-            {saved.length > 0 && (
-              <div className="mb-4">
-                <p className="text-sm font-semibold text-gray-700 mb-2">Saved</p>
-                <div className="flex flex-wrap gap-2">
-                  {saved.map(({ word, score, blanksCover, gameScore }) => (
-                    <WordCard key={word} word={word} score={gameScore ?? score} blanksCover={blanksCover}
-                      variant="prominent"
-                      onRemove={() => toggleSaved({ word, score, blanksCover, gameScore })}
-                      onScoreDown={() => updateGameScore(word, (gameScore ?? score) - 1)}
-                      onScoreUp={() => updateGameScore(word, (gameScore ?? score) + 1)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
             {searched && (
               <div>
                 <p className="text-sm text-gray-500 mb-2 font-medium">
