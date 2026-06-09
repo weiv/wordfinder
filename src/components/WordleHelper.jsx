@@ -97,51 +97,54 @@ export default function WordleHelper() {
   }, [activeCell, grid, updateCell])
 
   const handleSearch = useCallback(() => {
-    // Build constraints from grid
-    const greens = Array(WORD_LEN).fill(null) // exact position
-    const yellowSets = Array.from({ length: WORD_LEN }, () => new Set()) // present but not here
-    const required = new Set() // must contain
-    const excluded = new Set() // must not contain
+    // Build constraints from the grid, tracking per-letter min/max counts so that
+    // duplicate-letter feedback is respected (e.g. one E yellow + another E gray in
+    // the same guess means "exactly one E").
+    const greens = Array(WORD_LEN).fill(null)                            // answer[i] must equal
+    const forbidden = Array.from({ length: WORD_LEN }, () => new Set())  // answer[i] must not be
+    const minCount = {} // letter -> minimum occurrences in the answer
+    const maxCount = {} // letter -> maximum occurrences in the answer
 
     for (const row of grid) {
-      for (let col = 0; col < WORD_LEN; col++) {
-        const { letter, state } = row[col]
+      if (!row.some(c => c.letter)) continue
+      const present = {} // green+yellow count for this guess
+      const grayed = {}  // letters marked gray in this guess
+      for (let i = 0; i < WORD_LEN; i++) {
+        const { letter, state } = row[i]
         if (!letter) continue
         if (state === 'green') {
-          greens[col] = letter
-          required.add(letter)
+          greens[i] = letter
+          present[letter] = (present[letter] || 0) + 1
         } else if (state === 'yellow') {
-          yellowSets[col].add(letter)
-          required.add(letter)
+          forbidden[i].add(letter)
+          present[letter] = (present[letter] || 0) + 1
         } else if (state === 'gray') {
-          excluded.add(letter)
+          forbidden[i].add(letter)
+          grayed[letter] = true
         }
+      }
+      // Green/yellow seen n times in a guess => at least n in the answer.
+      for (const l in present) minCount[l] = Math.max(minCount[l] || 0, present[l])
+      // A gray => no more of that letter than were green/yellow in the same guess.
+      for (const l in grayed) {
+        const cap = present[l] || 0
+        maxCount[l] = maxCount[l] === undefined ? cap : Math.min(maxCount[l], cap)
       }
     }
 
-    // Remove from excluded any letter that's required (gray can overlap with green/yellow in multi-instance scenarios)
-    for (const l of required) excluded.delete(l)
+    const countOf = (w, l) => {
+      let n = 0
+      for (const c of w) if (c === l) n++
+      return n
+    }
 
     const matched = (byLength[WORD_LEN] || []).filter(w => {
-      // Check greens
       for (let i = 0; i < WORD_LEN; i++) {
         if (greens[i] && w[i] !== greens[i]) return false
+        if (forbidden[i].has(w[i])) return false
       }
-      // Check yellows (must contain letter, but not at this position)
-      for (let i = 0; i < WORD_LEN; i++) {
-        for (const l of yellowSets[i]) {
-          if (!w.includes(l)) return false
-          if (w[i] === l) return false
-        }
-      }
-      // Check required
-      for (const l of required) {
-        if (!w.includes(l)) return false
-      }
-      // Check excluded
-      for (const l of excluded) {
-        if (w.includes(l)) return false
-      }
+      for (const l in minCount) if (countOf(w, l) < minCount[l]) return false
+      for (const l in maxCount) if (countOf(w, l) > maxCount[l]) return false
       return true
     }).sort()
 
