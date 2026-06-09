@@ -18,7 +18,7 @@ This is a single-page React app built with Vite, Tailwind CSS, and no backend �
 
 **Entry point:** `index.html` → `src/main.jsx` → `src/App.jsx`
 
-**Mode switching:** `App.jsx` holds a single `mode` state (`'wordle'` | `'crossword'` | `'letters'`, persisted to `localStorage`) and renders `WordleHelper`, `CrosswordHelper`, or `LettersHelper`. The tab nav bar lives directly in `App.jsx`.
+**Mode switching:** `App.jsx` holds a single `mode` state (`'wordle'` | `'crossword'` | `'letters'`, persisted to `localStorage`) and renders `WordleHelper`, `CrosswordHelper`, or `LettersHelper`. The top nav bar (in `App.jsx`) shares one row across the three mode tabs plus a `?` help toggle and a `Reset` button. `App` owns `showHelp` (passed to the active helper) and a `resetRef` that each helper assigns its `handleReset` to, so the shared buttons drive the active mode.
 
 **Word data:** `src/data/words.js` holds the Collins/SOWPODS word-game dictionary (A–Z only, lengths 3–15). The words are stored as a single space-joined string and split into the exported `WORDS` array at load. It also exports a `byLength` map (word length → array of words); all three helpers filter through `byLength` so each search only scans words of plausible length. Regenerate from a SOWPODS source if coverage needs updating.
 

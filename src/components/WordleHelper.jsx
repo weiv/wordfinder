@@ -25,7 +25,7 @@ function emptyGrid() {
   )
 }
 
-export default function WordleHelper() {
+export default function WordleHelper({ showHelp, resetRef }) {
   const [grid, setGrid] = useState(() => {
     try {
       const saved = localStorage.getItem('wordleGrid')
@@ -37,7 +37,6 @@ export default function WordleHelper() {
   const [activeCell, setActiveCell] = useState({ row: 0, col: 0 })
   const [results, setResults] = useState([])
   const [searched, setSearched] = useState(false)
-  const [showHelp, setShowHelp] = useState(false)
   const containerRef = useRef(null)
   const rowRefs = useRef([])
 
@@ -214,6 +213,7 @@ export default function WordleHelper() {
     setSearched(false)
     containerRef.current?.focus()
   }, [])
+  if (resetRef) resetRef.current = handleReset
 
   return (
     <div
@@ -222,21 +222,6 @@ export default function WordleHelper() {
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
-      {/* Fixed top bar */}
-      <div className="fixed top-10 left-0 right-0 z-20 bg-white border-b border-gray-200">
-        <div className="max-w-lg mx-auto px-4 py-0.5 flex justify-between items-center">
-          <button
-            onClick={() => setShowHelp(h => !h)}
-            className={`w-7 h-7 rounded-full text-xs font-bold transition-colors ${showHelp ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}
-            aria-label="Toggle help"
-          >?</button>
-          <button
-            onClick={handleReset}
-            className="px-6 h-7 bg-gray-200 text-gray-600 text-xs font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
-          >Reset</button>
-        </div>
-      </div>
-      <div className="h-8" />{/* spacer for fixed bar */}
       {showHelp && (
         <p className="text-sm text-gray-500 mb-3 text-center">
           Tap a cell to enter a letter. Tap again to cycle color:<br />

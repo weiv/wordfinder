@@ -248,12 +248,11 @@ function ClearButton({ onClick }) {
   )
 }
 
-export default function LettersHelper() {
+export default function LettersHelper({ showHelp, resetRef }) {
   const [sessions, setSessions] = useState(_initialState.sessions)
   const [activeSessionId, setActiveSessionId] = useState(_initialState.activeSessionId)
   const [results, setResults] = useState([])
   const [searched, setSearched] = useState(false)
-  const [showHelp, setShowHelp] = useState(false)
   const [activeRow, setActiveRow] = useState('rack')
   const [drag, setDrag] = useState(null)
   const [pendingDelete, setPendingDelete] = useState(null)
@@ -599,6 +598,7 @@ export default function LettersHelper() {
     clearSearch()
     setActiveRow('rack')
   }
+  if (resetRef) resetRef.current = handleReset
 
   function handleVirtualKey(key) {
     if (key === 'DEL') {
@@ -655,21 +655,6 @@ export default function LettersHelper() {
 
       {/* Single fixed column below the top nav */}
       <div className="fixed top-10 bottom-0 left-0 right-0 flex flex-col bg-white">
-
-      {/* Top bar */}
-      <div className="flex-shrink-0 border-b border-gray-200">
-        <div className="max-w-lg mx-auto px-4 py-0.5 flex justify-between items-center">
-          <button
-            onClick={() => setShowHelp(h => !h)}
-            className={`w-7 h-7 rounded-full text-xs font-bold transition-colors ${showHelp ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}
-            aria-label="Toggle help"
-          >?</button>
-          <button
-            onClick={handleReset}
-            className="px-6 h-7 bg-gray-200 text-gray-600 text-xs font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
-          >Reset</button>
-        </div>
-      </div>
 
       {/* Session strip — capped at two rows, scrolls beyond that */}
       <div className="flex-shrink-0 border-b border-gray-200">
