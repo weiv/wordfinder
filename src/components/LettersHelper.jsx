@@ -142,6 +142,17 @@ function SessionPill({ session, isActive, isPendingDelete, onTap, onLongPress, o
   )
 }
 
+const TILE_FULL = 32 // default tile width (w-8)
+const TILE_MIN  = 16 // narrowest before we allow horizontal scroll
+const TILE_GAP  = 4  // gap-1 between tiles, in px
+
+// Shrink tiles to fit a single row instead of wrapping; cap at the default size.
+function fitTileWidth(avail, count) {
+  if (!avail || count <= 0) return TILE_FULL
+  const fit = Math.floor((avail - TILE_GAP * (count - 1)) / count)
+  return Math.max(TILE_MIN, Math.min(TILE_FULL, fit))
+}
+
 const KB_ROW1 = 'QWERTYUIOP'.split('')
 const KB_ROW2 = 'ASDFGHJKL'.split('')
 const KB_ROW3 = 'ZXCVBNM'.split('')
@@ -248,6 +259,23 @@ export default function LettersHelper() {
   rackTilesRef.current  = rackTiles
   const patternTilesRef = useRef(patternTiles)
   patternTilesRef.current = patternTiles
+
+  // Measure each tile row so tiles can shrink to fit one row instead of wrapping
+  const [rowWidths, setRowWidths] = useState({ rack: 0, pattern: 0 })
+  useEffect(() => {
+    const PAD = 8 // px-1 left+right
+    const measure = () => setRowWidths({
+      rack:    rackRowRef.current    ? rackRowRef.current.clientWidth    - PAD : 0,
+      pattern: patternRowRef.current ? patternRowRef.current.clientWidth - PAD : 0,
+    })
+    measure()
+    const ro = new ResizeObserver(measure)
+    if (rackRowRef.current)    ro.observe(rackRowRef.current)
+    if (patternRowRef.current) ro.observe(patternRowRef.current)
+    return () => ro.disconnect()
+  }, [])
+  const rackTileW = fitTileWidth(rowWidths.rack, rackTiles.length)
+  const patTileW  = fitTileWidth(rowWidths.pattern, patternTiles.length)
 
   function updateActiveSession(patch) {
     setSessions(prev => {
@@ -575,7 +603,7 @@ export default function LettersHelper() {
             opacity: 0.85,
           }}
         >
-          <ScrabbleTile letter={drag.letter} score={SCORES[drag.letter] || 0} />
+          <ScrabbleTile letter={drag.letter} score={SCORES[drag.letter] || 0} width={drag.tileW} />
         </div>
       )}
 
@@ -597,9 +625,9 @@ export default function LettersHelper() {
         </div>
       </div>
 
-      {/* Session strip — wraps to multiple rows */}
+      {/* Session strip — capped at two rows, scrolls beyond that */}
       <div className="flex-shrink-0 border-b border-gray-200">
-        <div className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 max-w-lg mx-auto">
+        <div className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 max-w-lg mx-auto max-h-[4.25rem] overflow-y-auto">
           {sessions.map(s => (
             renamingSession === s.id ? (
               <input key={s.id} ref={renameRef} value={renameName}
@@ -671,7 +699,7 @@ export default function LettersHelper() {
                 <div
                   ref={rackRowRef}
                   onPointerDown={() => setActiveRow('rack')}
-                  className={`flex-1 flex flex-wrap gap-1 min-h-[2.75rem] px-1 py-1 rounded-lg border-2 transition-colors ${
+                  className={`flex-1 flex flex-nowrap gap-1 min-h-[2.75rem] px-1 py-1 rounded-lg border-2 overflow-x-auto transition-colors ${
                     activeRow === 'rack' ? 'border-wordle-green' : 'border-gray-200'
                   }`}
                 >
@@ -686,6 +714,7 @@ export default function LettersHelper() {
                       <ScrabbleTile
                         letter={letter}
                         score={SCORES[letter] || 0}
+                        width={rackTileW}
                         isDragging={drag?.srcRow === 'rack' && drag?.srcIndex === i}
                       />
                     </div>
@@ -716,7 +745,7 @@ export default function LettersHelper() {
                 <div
                   ref={patternRowRef}
                   onPointerDown={() => setActiveRow('pattern')}
-                  className={`flex-1 flex flex-wrap gap-1 min-h-[2.75rem] px-1 py-1 rounded-lg border-2 transition-colors ${
+                  className={`flex-1 flex flex-nowrap gap-1 min-h-[2.75rem] px-1 py-1 rounded-lg border-2 overflow-x-auto transition-colors ${
                     activeRow === 'pattern' ? 'border-wordle-green' : 'border-gray-200'
                   }`}
                 >
@@ -731,6 +760,7 @@ export default function LettersHelper() {
                       <ScrabbleTile
                         letter={letter}
                         score={SCORES[letter] || 0}
+                        width={patTileW}
                         isDragging={drag?.srcRow === 'pattern' && drag?.srcIndex === i}
                       />
                     </div>

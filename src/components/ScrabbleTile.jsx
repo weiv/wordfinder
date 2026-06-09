@@ -1,7 +1,7 @@
-export default function ScrabbleTile({ letter, score, isDragging }) {
+export default function ScrabbleTile({ letter, score, isDragging, width = 32 }) {
   if (isDragging) {
     return (
-      <div className="w-8 h-10 rounded border-2 border-dashed border-gray-300 bg-gray-100 opacity-30 flex-shrink-0" />
+      <div className="h-10 rounded border-2 border-dashed border-gray-300 bg-gray-100 opacity-30 flex-shrink-0" style={{ width }} />
     )
   }
 
@@ -10,8 +10,9 @@ export default function ScrabbleTile({ letter, score, isDragging }) {
 
   return (
     <div
-      className="w-8 h-10 rounded flex items-center justify-center relative flex-shrink-0"
+      className="h-10 rounded flex items-center justify-center relative flex-shrink-0"
       style={{
+        width,
         background: isAnchor ? '#dce8f5' : '#f5f0e0',
         border: isAnchor ? '2px solid #3b82f6' : isBlank ? '2px dashed #b5a882' : '2px solid #b5a882',
       }}
