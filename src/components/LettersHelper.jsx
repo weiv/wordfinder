@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, Fragment } from 'react'
-import { WORDS } from '../data/words'
+import { byLength } from '../data/words'
 import ScrabbleTile from './ScrabbleTile'
 
 const SCORES = {
@@ -489,7 +489,15 @@ export default function LettersHelper() {
     const anchorEnd   = /[$!]$/.test(posLetters)
     const patternCore = posLetters.replace(/^[\^#@]/, '').replace(/[$!]$/, '')
     const fixedCount = patternCore.replace(/\./g, '').length // board letters, not from rack
-    const matched = WORDS
+    // A word can use at most (rack size + fixed board letters) tiles, and must be at
+    // least as long as the pattern. Only scan the length buckets that can possibly match.
+    const maxLen = available.length + fixedCount
+    const minLen = patternCore.length || 1
+    const candidates = []
+    for (let len = minLen; len <= maxLen; len++) {
+      if (byLength[len]) candidates.push(...byLength[len])
+    }
+    const matched = candidates
       .flatMap(w => {
         const blanksCover = patternCore
           ? matchPattern(w, patternCore, anchorStart, anchorEnd, available)

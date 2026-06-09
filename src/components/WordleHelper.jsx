@@ -229,7 +229,7 @@ export default function WordleHelper() {
           >?</button>
           <button
             onClick={handleReset}
-            className="px-3 h-6 bg-gray-200 text-gray-500 text-xs font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
+            className="px-6 h-9 bg-gray-200 text-gray-600 text-sm font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
           >Reset</button>
         </div>
       </div>

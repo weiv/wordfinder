@@ -13,7 +13,8 @@ export default function CrosswordHelper() {
 
   useEffect(() => {
     setError('')
-    const raw = pattern.trim().toUpperCase()
+    // Keep only letters and wildcards so stray spaces don't break matching.
+    const raw = pattern.toUpperCase().replace(/[^A-Z_?]/g, '')
     if (!raw) {
       setResults([])
       setSearched(false)
@@ -52,7 +53,7 @@ export default function CrosswordHelper() {
     patternRef.current?.focus()
   }
 
-  const wordLen = pattern.trim().length
+  const wordLen = pattern.toUpperCase().replace(/[^A-Z_?]/g, '').length
 
   return (
     <div>
@@ -65,7 +66,7 @@ export default function CrosswordHelper() {
           >?</button>
           <button
             onClick={handleReset}
-            className="px-3 h-6 bg-gray-200 text-gray-500 text-xs font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
+            className="px-6 h-9 bg-gray-200 text-gray-600 text-sm font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 transition-colors"
           >Reset</button>
         </div>
       </div>
