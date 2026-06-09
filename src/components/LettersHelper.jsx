@@ -744,30 +744,30 @@ export default function LettersHelper() {
           </div>
         </div>
 
-        {/* Saved — fixed row, stays visible while results scroll */}
-        {saved.length > 0 && (
-          <div className="flex-shrink-0 bg-white border-b border-gray-200">
-            <div className="max-w-lg mx-auto px-4 py-2">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-sm font-semibold text-gray-700">Saved</p>
-                <ClearButton onClick={() => updateActiveSession({ savedWords: [] })} />
-              </div>
-              <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
-                {saved.map(({ word, score, blanksCover, gameScore }) => (
-                  <WordCard key={word} word={word} score={gameScore ?? score} blanksCover={blanksCover}
-                    variant="prominent"
-                    onRemove={() => toggleSaved({ word, score, blanksCover, gameScore })}
-                    onScoreDown={() => updateGameScore(word, (gameScore ?? score) - 1)}
-                    onScoreUp={() => updateGameScore(word, (gameScore ?? score) + 1)}
-                  />
-                ))}
+        {/* Scrollable candidates — Saved is pinned at the top via sticky so it
+            stays visible without consuming its own fixed band (which crowded out
+            the candidate list on short screens). */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {saved.length > 0 && (
+            <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-2">
+              <div className="max-w-lg mx-auto">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm font-semibold text-gray-700">Saved</p>
+                  <ClearButton onClick={() => updateActiveSession({ savedWords: [] })} />
+                </div>
+                <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
+                  {saved.map(({ word, score, blanksCover, gameScore }) => (
+                    <WordCard key={word} word={word} score={gameScore ?? score} blanksCover={blanksCover}
+                      variant="prominent"
+                      onRemove={() => toggleSaved({ word, score, blanksCover, gameScore })}
+                      onScoreDown={() => updateGameScore(word, (gameScore ?? score) - 1)}
+                      onScoreUp={() => updateGameScore(word, (gameScore ?? score) + 1)}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Scrollable candidates */}
-        <div className="flex-1 overflow-y-auto">
+          )}
           <div className="max-w-lg mx-auto px-4 py-2">
             {searched && (
               <div>
@@ -799,7 +799,7 @@ export default function LettersHelper() {
               {['^', '.', '$'].map(key => (
                 <button key={key}
                   onClick={() => handleVirtualKey(key)}
-                  className="flex-1 h-8 bg-blue-100 text-blue-700 rounded text-sm font-bold hover:bg-blue-200 active:bg-blue-300 select-none">
+                  className="flex-1 h-7 sm:h-8 bg-blue-100 text-blue-700 rounded text-sm font-bold hover:bg-blue-200 active:bg-blue-300 select-none">
                   {key}
                 </button>
               ))}
@@ -808,7 +808,7 @@ export default function LettersHelper() {
               {KB_ROW1.map(l => (
                 <button key={l}
                   onClick={() => handleVirtualKey(l)}
-                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400 select-none">
+                  className="flex-1 min-w-0 h-9 sm:h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400 select-none">
                   {l}
                 </button>
               ))}
@@ -817,7 +817,7 @@ export default function LettersHelper() {
               {KB_ROW2.map(l => (
                 <button key={l}
                   onClick={() => handleVirtualKey(l)}
-                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400 select-none">
+                  className="flex-1 min-w-0 h-9 sm:h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400 select-none">
                   {l}
                 </button>
               ))}
@@ -826,13 +826,13 @@ export default function LettersHelper() {
               {KB_ROW3.map(l => (
                 <button key={l}
                   onClick={() => handleVirtualKey(l)}
-                  className="flex-1 min-w-0 h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400 select-none">
+                  className="flex-1 min-w-0 h-9 sm:h-10 bg-gray-200 rounded text-xs font-bold hover:bg-gray-300 active:bg-gray-400 select-none">
                   {l}
                 </button>
               ))}
               <button
                 onClick={() => handleVirtualKey('DEL')}
-                className="flex-[1.5] h-10 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500 select-none">
+                className="flex-[1.5] h-9 sm:h-10 bg-gray-300 rounded text-xs font-bold hover:bg-gray-400 active:bg-gray-500 select-none">
                 ⌫
               </button>
             </div>
