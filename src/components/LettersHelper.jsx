@@ -60,6 +60,38 @@ function matchPattern(word, patternCore, anchorStart, anchorEnd, available) {
   return null
 }
 
+// Fire an action on press, then auto-repeat while held.
+function useHoldRepeat(callback) {
+  const cbRef = useRef(callback)
+  cbRef.current = callback
+  const timers = useRef({})
+  const stop = () => {
+    clearTimeout(timers.current.t)
+    clearInterval(timers.current.i)
+    timers.current = {}
+  }
+  const start = (e) => {
+    e.preventDefault()
+    cbRef.current()
+    timers.current.t = setTimeout(() => {
+      timers.current.i = setInterval(() => cbRef.current(), 90)
+    }, 400)
+  }
+  useEffect(() => stop, []) // clear timers on unmount
+  return { onPointerDown: start, onPointerUp: stop, onPointerLeave: stop, onPointerCancel: stop }
+}
+
+function StepperButton({ onStep, label, children }) {
+  const hold = useHoldRepeat(onStep)
+  return (
+    <button {...hold} aria-label={label}
+      className="w-7 h-7 flex items-center justify-center rounded text-green-100 text-base leading-none select-none active:bg-black/20"
+      style={{ touchAction: 'manipulation' }}>
+      {children}
+    </button>
+  )
+}
+
 // variant: 'prominent' (saved section) | 'saved' (result, in saved) | 'normal' (result, not saved)
 function WordCard({ word, score, blanksCover, variant, usesAll, onClick,
                     onRemove, onScoreDown, onScoreUp }) {
@@ -82,13 +114,9 @@ function WordCard({ word, score, blanksCover, variant, usesAll, onClick,
           {wordLetters}
         </button>
         <div className="flex items-center gap-0.5">
-          <button onClick={onScoreDown} aria-label="Decrease score"
-            className="w-7 h-7 flex items-center justify-center rounded text-green-100 text-base leading-none select-none active:bg-black/20"
-            style={{ touchAction: 'manipulation' }}>▼</button>
+          <StepperButton onStep={onScoreDown} label="Decrease score">▼</StepperButton>
           <span className="text-sm font-bold text-white min-w-[1.5rem] text-center">{score}</span>
-          <button onClick={onScoreUp} aria-label="Increase score"
-            className="w-7 h-7 flex items-center justify-center rounded text-green-100 text-base leading-none select-none active:bg-black/20"
-            style={{ touchAction: 'manipulation' }}>▲</button>
+          <StepperButton onStep={onScoreUp} label="Increase score">▲</StepperButton>
         </div>
       </div>
     )
@@ -345,9 +373,20 @@ export default function LettersHelper() {
     setRenamingSession(null)
   }
 
-  const updateGameScore = (word, gameScore) => {
-    const next = saved.map(s => s.word === word ? { ...s, gameScore } : s)
-    updateActiveSession({ savedWords: next })
+  // Adjust a saved word's score by a delta. Uses a functional update so rapid
+  // repeats (press-and-hold) always build on the latest value.
+  const adjustGameScore = (word, delta) => {
+    setSessions(prev => {
+      const next = prev.map(s => {
+        if (s.id !== activeSessionId) return s
+        const savedWords = s.savedWords.map(sw =>
+          sw.word === word ? { ...sw, gameScore: (sw.gameScore ?? sw.score) + delta } : sw
+        )
+        return { ...s, savedWords }
+      })
+      localStorage.setItem('sessions', JSON.stringify(next))
+      return next
+    })
   }
 
   const toggleSaved = (wordObj) => {
@@ -797,8 +836,8 @@ export default function LettersHelper() {
                     <WordCard key={word} word={word} score={gameScore ?? score} blanksCover={blanksCover}
                       variant="prominent"
                       onRemove={() => toggleSaved({ word, score, blanksCover, gameScore })}
-                      onScoreDown={() => updateGameScore(word, (gameScore ?? score) - 1)}
-                      onScoreUp={() => updateGameScore(word, (gameScore ?? score) + 1)}
+                      onScoreDown={() => adjustGameScore(word, -1)}
+                      onScoreUp={() => adjustGameScore(word, 1)}
                     />
                   ))}
                 </div>
