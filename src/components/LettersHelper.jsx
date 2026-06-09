@@ -142,6 +142,7 @@ function SessionPill({ session, isActive, isPendingDelete, onTap, onLongPress, o
   )
 }
 
+const RACK_MAX = 7 // a Scrabble rack holds 7 tiles
 const TILE_FULL = 32 // default tile width (w-8)
 const TILE_MIN  = 16 // narrowest before we allow horizontal scroll
 const TILE_GAP  = 4  // gap-1 between tiles, in px
@@ -380,6 +381,7 @@ export default function LettersHelper() {
     }
 
     if (dragState.dropRow === 'rack') {
+      if (newRack.length >= RACK_MAX) return // don't overfill the rack on drop
       dropIdx = Math.max(0, Math.min(dropIdx, newRack.length))
       newRack.splice(dropIdx, 0, dragState.letter)
     } else if (dragState.dropRow === 'pattern') {
@@ -577,6 +579,7 @@ export default function LettersHelper() {
       updateActiveSession({ posLetters: patternToString([...pat, '$']) })
     } else if (/^[A-Z.]$/.test(key)) {
       if (activeRow === 'rack') {
+        if (rackTilesRef.current.length >= RACK_MAX) return // a rack holds 7 tiles
         updateActiveSession({ letters: rackToString([...rackTilesRef.current, key]) })
       } else {
         const next = [...patternTilesRef.current]
