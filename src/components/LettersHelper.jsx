@@ -210,14 +210,14 @@ function loadSessions() {
     localStorage.removeItem('savedWords')
     return { sessions: [session], activeSessionId: '1' }
   }
-  const sessions = JSON.parse(raw)
+  let sessions
+  try { sessions = JSON.parse(raw) } catch { sessions = null }
+  if (!Array.isArray(sessions) || sessions.length === 0) sessions = [newSession('Game 1', '1')]
   return {
     sessions,
     activeSessionId: localStorage.getItem('activeSessionId') || sessions[0].id,
   }
 }
-
-const _initialState = loadSessions()
 
 // Serialize tile arrays back to strings
 function rackToString(tiles) { return tiles.join('') }
@@ -249,8 +249,34 @@ function ClearButton({ onClick }) {
 }
 
 export default function LettersHelper({ showHelp, resetRef }) {
-  const [sessions, setSessions] = useState(_initialState.sessions)
-  const [activeSessionId, setActiveSessionId] = useState(_initialState.activeSessionId)
+  // Read storage on every mount (not once at import) so remounting after a tab
+  // switch never starts from a stale snapshot and overwrites newer saves.
+  const [boot] = useState(loadSessions)
+  const [sessions, setSessions] = useState(boot.sessions)
+  const [activeSessionId, setActiveSessionId] = useState(boot.activeSessionId)
+
+  // Re-sync from storage when another open copy of the app saves (storage event)
+  // and when this page comes back on screen (a backgrounded/frozen tab on iOS
+  // otherwise keeps its old in-memory state and would overwrite newer saves).
+  useEffect(() => {
+    const resync = () => {
+      const s = loadSessions()
+      setSessions(s.sessions)
+      setActiveSessionId(s.activeSessionId)
+    }
+    const onStorage = e => {
+      if (e.key === null || e.key === 'sessions' || e.key === 'activeSessionId') resync()
+    }
+    const onVisible = () => { if (document.visibilityState === 'visible') resync() }
+    window.addEventListener('storage', onStorage)
+    window.addEventListener('pageshow', resync)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener('pageshow', resync)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [])
   const [results, setResults] = useState([])
   const [searched, setSearched] = useState(false)
   const [activeRow, setActiveRow] = useState('rack')
