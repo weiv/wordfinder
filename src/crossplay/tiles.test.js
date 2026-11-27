@@ -6,12 +6,12 @@ import game from './fixtures/screenshot-game.json'
 test('unseen tiles and bag on the screenshot board', () => {
   const { board } = replay(game.moves)
   const u = unseenTiles(board, game.rack)
-  expect(Object.values(u).reduce((a, b) => a + b, 0)).toBe(73)
+  expect(Object.values(u).reduce((a, b) => a + b, 0)).toBe(74)
   expect(u.J).toBe(0)
   expect(u.B).toBe(0)
   expect(u.W).toBe(1)
   expect(u['?']).toBe(3)
-  expect(bagCount(board, game.rack)).toBe(66)
+  expect(bagCount(board, game.rack)).toBe(67) // matches the 67 Crossplay showed
 })
 
 test('blanks on the board and in the rack count as ?', () => {

@@ -44,7 +44,7 @@ native iOS/Android app ("Crossplay Companion"), so the game logic must be portab
 | Rule | Value | Confidence |
 |---|---|---|
 | Board | 15×15, layout below | Transcribed from the user's screenshot; verified by the screenshot's scores (see below) |
-| Tiles | 100: A9 B2 C2 D4 E12 F2 G3 H3 I8 J1 K1 L4 M2 N5 O8 P2 Q1 R6 S5 T6 U3 V2 W2 X1 Y2 Z1, 3 blanks | Third-party guides; sums to 100. **Open:** the screenshot's bag shows 67, but 100 − 20 on board − 14 in racks = 66 |
+| Tiles | 100: A9 B2 C2 D4 E12 F2 G3 H3 I8 J1 K1 L4 M2 N5 O8 P2 Q1 R6 S5 T6 U3 V2 W2 X1 Y2 Z1, 3 blanks | Third-party guides; sums to 100. Confirmed by the screenshot: 100 − 19 on board − 14 in racks = 67, the bag count shown |
 | Letter values | A E I N O R S T 1 · D L U 2 · C H M P 3 · B F G Y 4 · W 5 · K V 6 · X 8 · J Q Z 10 · blank 0 | Matches the tiles in the screenshot |
 | Rack | 7 tiles | Screenshot |
 | Sweep (all 7 tiles in one play) | +40 | Third-party guides |
@@ -85,8 +85,8 @@ values: You played RUBACE (H4 down) = 32 and COWPAT (8H across) = 38; RudiB play
 JOBBER (6E across) = 41 and THREW (J4 down) = 17. Total 70 / 58 exactly. This confirms
 letter values, 2L, 3L, a 2W word multiplier, letter premiums only on new tiles, and no
 bonus on the centre square (RUBACE would be 64 otherwise). **Still unverified:** 3W,
-stacked word multipliers, the +40 sweep, and the tile distribution (see the bag-count
-discrepancy above). The reported-score field below catches any of these being wrong.
+stacked word multipliers and the +40 sweep. The reported-score field below catches either
+being wrong. The tile set checks out: 19 tiles on board leave a bag of 67, as shown.
 
 ## Approaches (decided)
 

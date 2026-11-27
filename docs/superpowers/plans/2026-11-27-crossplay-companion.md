@@ -103,7 +103,7 @@
 **Interfaces:**
 - Produces: `unseenTiles(board, rack: string) -> Record<A–Z|'?', number>` (TILE_COUNTS − board tiles (blanks count as `?`) − rack); `bagCount(board, rack) -> number` = `max(0, sum(unseen) − 7)`; `overdrawn(board, rack) -> string[]` letters whose unseen count would be negative.
 
-- [ ] **Step 1: Failing tests:** on the screenshot board with rack `EGROFVI`: sum of unseen = 73, `bagCount = 66`, unseen `J = 0`, `B = 0`, `W = 1`, `'?' = 3`; rack `QQ` on an empty board → `overdrawn` = `['Q']`.
+- [ ] **Step 1: Failing tests:** on the screenshot board with rack `EGROFVI`: sum of unseen = 74, `bagCount = 67`, unseen `J = 0`, `B = 0`, `W = 1`, `'?' = 3`; rack `QQ` on an empty board → `overdrawn` = `['Q']`.
 - [ ] **Step 2:** Run → FAIL. **Step 3:** Implement. **Step 4:** Run → PASS.
 - [ ] **Step 5:** Commit `Crossplay: tile accounting [skip netlify]`.
 
