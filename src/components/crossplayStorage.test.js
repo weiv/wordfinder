@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { newGame, loadGames, saveGames, undoLastMove, GAMES_KEY, ACTIVE_KEY } from './crossplayStorage.js'
+import { newGame, loadGames, saveGames, undoLastMove, setReported, GAMES_KEY, ACTIVE_KEY } from './crossplayStorage.js'
 
 function memoryStorage(init = {}) {
   const data = { ...init }
@@ -60,4 +60,23 @@ test('undo never overfills the rack', () => {
     moves: [{ player: 'me', kind: 'play', row: 7, col: 6, dir: 'across', word: 'FIVE' }],
   }
   expect(undoLastMove(g).rack.length).toBe(7)
+})
+
+test('loadGames drops malformed moves and nameless games instead of crashing later', () => {
+  const good = newGame('Ann')
+  const bad = { ...newGame('Bob'), moves: [null, { kind: 'play' }, { player: 'me', kind: 'pass' }] }
+  const nameless = { ...newGame('X'), name: undefined }
+  const s = memoryStorage({ [GAMES_KEY]: JSON.stringify([good, bad, nameless]) })
+  const { games } = loadGames(s)
+  expect(games.map(g => g.name)).toEqual(['Ann', 'Bob'])
+  expect(games[1].moves).toEqual([{ player: 'me', kind: 'pass' }])
+})
+
+test('setReported records, changes and clears the Crossplay score of a move', () => {
+  const g = { ...newGame('Ann'), moves: [{ player: 'me', kind: 'play', row: 7, col: 6, dir: 'across', word: 'CAT' }] }
+  const a = setReported(g, 0, 7)
+  expect(a.moves[0].reported).toBe(7)
+  const b = setReported(a, 0, null)
+  expect('reported' in b.moves[0]).toBe(false)
+  expect(g.moves[0].reported).toBeUndefined() // original untouched
 })

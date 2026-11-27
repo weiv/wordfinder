@@ -32,8 +32,28 @@ export function leaveValue(leave) {
   return Math.round(value * 10) / 10
 }
 
-export function rankMoves(plays) {
-  return plays
-    .map(p => ({ ...p, equity: p.score + leaveValue(p.leave) }))
-    .sort((a, b) => b.equity - a.equity || b.score - a.score || a.word.localeCompare(b.word))
+const better = (a, b) => b.equity - a.equity || b.score - a.score || a.word.localeCompare(b.word)
+
+// Rank plays by equity (score + leave value). With a limit, only the best `limit` plays
+// are kept (and copied), which keeps ranking tens of thousands of plays cheap.
+export function rankMoves(plays, limit = Infinity) {
+  const leaveCache = new Map()
+  const equityOf = p => {
+    let lv = leaveCache.get(p.leave)
+    if (lv === undefined) { lv = leaveValue(p.leave); leaveCache.set(p.leave, lv) }
+    return p.score + lv
+  }
+  if (!Number.isFinite(limit)) {
+    return plays.map(p => ({ ...p, equity: equityOf(p) })).sort(better)
+  }
+  const top = [] // sorted best-first, length <= limit
+  for (const p of plays) {
+    const candidate = { word: p.word, score: p.score, equity: equityOf(p) }
+    if (top.length === limit && better(candidate, top[top.length - 1]) >= 0) continue
+    let i = top.length
+    while (i > 0 && better(candidate, top[i - 1]) < 0) i--
+    top.splice(i, 0, { ...p, equity: candidate.equity })
+    if (top.length > limit) top.pop()
+  }
+  return top
 }

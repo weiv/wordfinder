@@ -4,7 +4,7 @@ import {
   SIZE, RACK_SIZE, BLANK, createLexicon, replay, evaluatePlay, playFromPlacement,
   generateMoves, rankMoves, unseenTiles, bagCount, overdrawn, formatPlay, tileValue,
 } from '../crossplay/index.js'
-import { newGame, loadGames, saveGames, undoLastMove } from './crossplayStorage.js'
+import { newGame, loadGames, saveGames, undoLastMove, setReported as withReportedScore } from './crossplayStorage.js'
 import CrossplayBoard from './CrossplayBoard'
 import ScrabbleTile from './ScrabbleTile'
 
@@ -34,6 +34,8 @@ function removeRackTiles(rack, tiles) {
   }
   return left.join('')
 }
+
+const playKey = p => `${p.row},${p.col},${p.dir},${p.word}`
 
 const tilesOf = placed => placed.map(t => (t.blank ? BLANK : t.letter)).join('')
 
@@ -112,7 +114,8 @@ export default function CrossplayHelper({ showHelp, resetRef }) {
   const [playerOverride, setPlayerOverride] = useState(null)
   const [reported, setReported] = useState('')
   const [confirmUnknown, setConfirmUnknown] = useState(false)
-  const [selected, setSelected] = useState(null)     // index into suggestions
+  const [selected, setSelected] = useState(null)     // playKey of the previewed suggestion
+  const [scoreEntry, setScoreEntry] = useState(null) // { index, value }: entering Crossplay's score for a logged move
   const [showLog, setShowLog] = useState(false)
   const [showUnseen, setShowUnseen] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
@@ -136,7 +139,7 @@ export default function CrossplayHelper({ showHelp, resetRef }) {
   const player = playerOverride ?? (lastPlayer === 'me' ? 'opp' : 'me')
 
   const suggestions = useMemo(
-    () => (game.rack ? rankMoves(generateMoves(board, game.rack, lexicon)).slice(0, MAX_SUGGESTIONS) : []),
+    () => (game.rack ? rankMoves(generateMoves(board, game.rack, lexicon), MAX_SUGGESTIONS) : []),
     [board, game.rack, lexicon],
   )
   const unseen = useMemo(() => unseenTiles(board, game.rack), [board, game.rack])
@@ -158,7 +161,7 @@ export default function CrossplayHelper({ showHelp, resetRef }) {
   const cursorSq = editing === 'move' ? nextSquare() : null
   const draftPlay = draft.length ? playFromPlacement(board, draft) : null
   const draftEval = draftPlay ? evaluatePlay(board, draftPlay, lexicon) : null
-  const selectedPlay = selected != null ? suggestions[selected] : null
+  const selectedPlay = selected != null ? suggestions.find(p => playKey(p) === selected) ?? null : null
   const preview = editing === 'move'
     ? draft
     : selectedPlay ? evaluatePlay(board, selectedPlay).placed : []
@@ -188,6 +191,14 @@ export default function CrossplayHelper({ showHelp, resetRef }) {
   function playSuggestion(p) {
     const { row, col, dir, word } = p
     logMove({ player: 'me', kind: 'play', row, col, dir, word }, removeRackTiles(game.rack, p.tiles))
+    setScoreEntry({ index: game.moves.length, value: '' }) // offer to record Crossplay's score
+  }
+
+  function saveScoreEntry() {
+    if (!scoreEntry) return
+    const v = scoreEntry.value === '' ? null : Number(scoreEntry.value)
+    updateGame(g => withReportedScore(g, scoreEntry.index, v))
+    setScoreEntry(null)
   }
 
   function handleSquareTap(row, col) {
@@ -408,6 +419,23 @@ export default function CrossplayHelper({ showHelp, resetRef }) {
             </div>
           )}
 
+          {/* Crossplay's score for a logged move */}
+          {scoreEntry && game.moves[scoreEntry.index] && (
+            <div className="flex items-center gap-1.5 text-xs border border-gray-200 rounded px-2 py-1.5">
+              <span>
+                Crossplay's score for{' '}
+                {game.moves[scoreEntry.index].kind === 'play' ? <Word word={game.moves[scoreEntry.index].word} /> : game.moves[scoreEntry.index].kind}
+                {' '}(app: {results[scoreEntry.index]?.score})
+              </span>
+              <input autoFocus value={scoreEntry.value} inputMode="numeric" placeholder="—"
+                onChange={e => setScoreEntry({ ...scoreEntry, value: e.target.value.replace(/\D/g, '') })}
+                onKeyDown={e => { if (e.key === 'Enter') saveScoreEntry(); if (e.key === 'Escape') setScoreEntry(null) }}
+                className="w-12 h-7 px-1 border border-gray-300 rounded text-sm text-center" />
+              <button onClick={() => setScoreEntry(null)} className="ml-auto px-2 h-7 rounded bg-gray-200 font-bold">Skip</button>
+              <button onClick={saveScoreEntry} className="px-2 h-7 rounded bg-wordle-green text-white font-bold">Save</button>
+            </div>
+          )}
+
           {/* Rack */}
           <button type="button" onClick={() => { setEditing(editing === 'rack' ? null : 'rack'); setCursorStart(null); resetDraft() }}
             className={`flex items-center gap-1 min-h-[3rem] px-2 rounded border-2 text-left ${editing === 'rack' ? 'border-wordle-green' : 'border-gray-200'}`}>
@@ -429,15 +457,15 @@ export default function CrossplayHelper({ showHelp, resetRef }) {
                 Best moves {suggestions.length === 0 && '— none found (swap?)'}
               </div>
               {suggestions.map((p, i) => (
-                <div key={`${p.row},${p.col},${p.dir},${p.word}`}
-                  onClick={() => setSelected(selected === i ? null : i)}
-                  className={`flex items-center gap-2 px-2 py-1 text-sm rounded cursor-pointer ${selected === i ? 'bg-amber-100' : i % 2 ? 'bg-gray-50' : ''}`}>
+                <div key={playKey(p)}
+                  onClick={() => setSelected(selected === playKey(p) ? null : playKey(p))}
+                  className={`flex items-center gap-2 px-2 py-1 text-sm rounded cursor-pointer ${selected === playKey(p) ? 'bg-amber-100' : i % 2 ? 'bg-gray-50' : ''}`}>
                   <Word word={p.word} />
                   <span className="text-xs text-gray-500">{formatPlay(p)}</span>
                   {p.sweep && <span className="text-[10px] font-bold text-red-600">SWEEP</span>}
                   <span className="ml-auto text-xs text-gray-400">{p.leave ? `keeps ${p.leave}` : ''}</span>
                   <span className="w-8 text-right font-bold">{p.score}</span>
-                  {selected === i && (
+                  {selected === playKey(p) && (
                     <button onClick={e => { e.stopPropagation(); playSuggestion(p) }}
                       className="px-2 h-6 rounded bg-wordle-green text-white text-xs font-bold">Play</button>
                   )}
@@ -465,7 +493,9 @@ export default function CrossplayHelper({ showHelp, resetRef }) {
                         : <span className="italic text-gray-500">{m.kind}</span>}
                       {r.error && <span className="text-red-600">invalid: {ERRORS[r.error]}</span>}
                       {r.mismatch && <span className="text-amber-700">⚠ app {r.score}</span>}
-                      <span className="ml-auto font-bold">{r.counted}</span>
+                      <button className="ml-auto font-bold underline decoration-dotted"
+                        title="Enter the score Crossplay showed"
+                        onClick={() => setScoreEntry({ index: i, value: m.reported != null ? String(m.reported) : '' })}>{r.counted}</button>
                     </li>
                   )
                 })}

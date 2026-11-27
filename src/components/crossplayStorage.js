@@ -21,13 +21,17 @@ export function newGame(opponent = 'Opponent') {
   }
 }
 
-const isGame = g => g && typeof g.id === 'string' && Array.isArray(g.moves) && typeof g.rack === 'string'
+const isGame = g => g && typeof g.id === 'string' && typeof g.name === 'string'
+  && Array.isArray(g.moves) && typeof g.rack === 'string'
+const isMove = m => m && (m.player === 'me' || m.player === 'opp')
+  && (m.kind === 'swap' || m.kind === 'pass'
+    || (m.kind === 'play' && typeof m.word === 'string' && Number.isInteger(m.row) && Number.isInteger(m.col)))
 
 export function loadGames(storage) {
   let games = null
   try { games = JSON.parse(storage.getItem(GAMES_KEY)) } catch { games = null }
   if (!Array.isArray(games)) games = []
-  games = games.filter(isGame)
+  games = games.filter(isGame).map(g => ({ ...g, moves: g.moves.filter(isMove) }))
   if (games.length === 0) games = [newGame()]
   const stored = storage.getItem(ACTIVE_KEY)
   const activeId = games.some(g => g.id === stored) ? stored : games[0].id
@@ -54,4 +58,14 @@ export function undoLastMove(game) {
     }
   }
   return { ...game, moves, rack }
+}
+
+// Record (or clear, with null) the score Crossplay showed for move `index`.
+export function setReported(game, index, value) {
+  const moves = game.moves.map((m, i) => {
+    if (i !== index) return m
+    const { reported, ...rest } = m
+    return value == null ? rest : { ...rest, reported: value }
+  })
+  return { ...game, moves }
 }
