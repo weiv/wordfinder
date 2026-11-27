@@ -1,0 +1,12 @@
+{
+  "description": "User's Crossplay screenshot 2026-11-27: You 70, RudiB 58. Bag showed 67.",
+  "moves": [
+    { "player": "me",  "kind": "play", "row": 3, "col": 7, "dir": "down",   "word": "RUBACE" },
+    { "player": "opp", "kind": "play", "row": 5, "col": 4, "dir": "across", "word": "JOBBER" },
+    { "player": "me",  "kind": "play", "row": 7, "col": 7, "dir": "across", "word": "COWPAT" },
+    { "player": "opp", "kind": "play", "row": 3, "col": 9, "dir": "down",   "word": "THREW" }
+  ],
+  "scores": [32, 41, 38, 17],
+  "totals": { "me": 70, "opp": 58 },
+  "rack": "EGROFVI"
+}
