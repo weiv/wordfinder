@@ -8,13 +8,19 @@ const PREMIUM_STYLE = {
 }
 
 const TILE_BG = '#3b67b8'
+const COLS = 'ABCDEFGHIJKLMNO'
+const LABEL = 'flex items-center justify-center text-gray-400 font-semibold select-none'
+const LABEL_SIZE = { fontSize: 'clamp(7px, 2.2vw, 11px)' }
 
 // board: Cell[225]; preview: {row,col,letter,blank}[]; highlight: Set of indices (last move);
 // cursor: {row,col,dir} | null; onSquareTap(row, col)
 export default function CrossplayBoard({ board, preview = [], highlight, cursor, onSquareTap }) {
   const previewAt = new Map(preview.map(t => [t.row * SIZE + t.col, t]))
-  const cells = []
+  // Coordinates: a corner spacer and column letters A–O on top; each row starts with its number.
+  const cells = [<div key="corner" />]
+  for (let c = 0; c < SIZE; c++) cells.push(<div key={`col${c}`} className={LABEL} style={LABEL_SIZE}>{COLS[c]}</div>)
   for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    if (c === 0) cells.push(<div key={`row${r}`} className={LABEL} style={LABEL_SIZE}>{r + 1}</div>)
     const i = r * SIZE + c
     const cell = board[i]
     const pv = previewAt.get(i)
@@ -50,13 +56,13 @@ export default function CrossplayBoard({ board, preview = [], highlight, cursor,
       <button key={i} type="button" onClick={() => onSquareTap?.(r, c)}
         className={`relative aspect-square rounded-[3px] focus:outline-none flex items-center justify-center select-none ${isCursor ? 'ring-2 ring-wordle-green z-10' : ''}`}
         style={style}
-        aria-label={`row ${r + 1} column ${'ABCDEFGHIJKLMNO'[c]}`}>
+        aria-label={`row ${r + 1} column ${COLS[c]}`}>
         {content}
       </button>
     )
   }
   return (
-    <div className="grid gap-[2px] w-full" style={{ gridTemplateColumns: `repeat(${SIZE}, minmax(0, 1fr))` }}>
+    <div className="grid gap-[2px] w-full" style={{ gridTemplateColumns: `minmax(0, 0.55fr) repeat(${SIZE}, minmax(0, 1fr))` }}>
       {cells}
     </div>
   )
