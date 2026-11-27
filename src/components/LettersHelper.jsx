@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, Fragment } from 'react'
 import { byLength } from '../data/words'
 import ScrabbleTile from './ScrabbleTile'
+import useHoldRepeat from './useHoldRepeat'
 
 const SCORES = {
   A:1, E:1, I:1, O:1, N:1, S:1, T:1, R:1,
@@ -58,27 +59,6 @@ function matchPattern(word, patternCore, anchorStart, anchorEnd, available) {
     if (result !== null) return result
   }
   return null
-}
-
-// Fire an action on press, then auto-repeat while held.
-function useHoldRepeat(callback) {
-  const cbRef = useRef(callback)
-  cbRef.current = callback
-  const timers = useRef({})
-  const stop = () => {
-    clearTimeout(timers.current.t)
-    clearInterval(timers.current.i)
-    timers.current = {}
-  }
-  const start = (e) => {
-    e.preventDefault()
-    cbRef.current()
-    timers.current.t = setTimeout(() => {
-      timers.current.i = setInterval(() => cbRef.current(), 90)
-    }, 400)
-  }
-  useEffect(() => stop, []) // clear timers on unmount
-  return { onPointerDown: start, onPointerUp: stop, onPointerLeave: stop, onPointerCancel: stop }
 }
 
 function StepperButton({ onStep, label, children }) {
