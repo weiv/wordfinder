@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { WORDS } from '../data/words'
 import {
   SIZE, RACK_SIZE, BLANK, createLexicon, replay, evaluatePlay, playFromPlacement,
-  generateMoves, rankMoves, unseenTiles, bagCount, overdrawn, formatPlay, tileValue,
+  generateMoves, rankMoves, emptyBoard, applyPlay, blankFixes, unseenTiles, bagCount, overdrawn, formatPlay, tileValue,
 } from '../crossplay/index.js'
-import { newGame, loadGames, saveGames, undoLastMove, setReported as withReportedScore } from './crossplayStorage.js'
+import { newGame, loadGames, saveGames, undoLastMove, setReported as withReportedScore, setMoveWord } from './crossplayStorage.js'
 import CrossplayBoard from './CrossplayBoard'
 import ScrabbleTile from './ScrabbleTile'
+import useHoldRepeat from './useHoldRepeat'
 
 // The lexicon is immutable, so build it once per page load and share it across mounts.
 let lexiconCache = null
@@ -48,6 +49,27 @@ function Word({ word }) {
           ? <span key={i}>{ch}</span>
           : <span key={i} className="underline decoration-dotted text-gray-400">{ch.toUpperCase()}</span>
       )}
+    </span>
+  )
+}
+
+function StepArrow({ onStep, label, children, disabled }) {
+  const hold = useHoldRepeat(onStep)
+  return (
+    <button {...(disabled ? {} : hold)} aria-label={label} disabled={disabled}
+      className="w-8 h-8 flex items-center justify-center rounded bg-gray-200 text-gray-700 text-sm select-none active:bg-gray-400 disabled:opacity-40"
+      style={{ touchAction: 'manipulation' }}>{children}</button>
+  )
+}
+
+// ▼ value ▲ — press and hold to repeat. The value turns amber when it differs from the app's score.
+function ScoreStepper({ value, appScore, onStep, disabled }) {
+  const differs = !disabled && appScore != null && value !== appScore
+  return (
+    <span className="inline-flex items-center gap-1">
+      <StepArrow onStep={() => onStep(-1)} label="Decrease score" disabled={disabled}>▼</StepArrow>
+      <span className={`min-w-[2rem] text-center text-sm font-bold ${differs ? 'text-amber-700' : ''}`}>{disabled ? '—' : value}</span>
+      <StepArrow onStep={() => onStep(1)} label="Increase score" disabled={disabled}>▲</StepArrow>
     </span>
   )
 }
@@ -115,6 +137,7 @@ export default function CrossplayHelper({ showHelp, resetRef }) {
   const [reported, setReported] = useState('')
   const [confirmUnknown, setConfirmUnknown] = useState(false)
   const [selected, setSelected] = useState(null)     // playKey of the previewed suggestion
+  const [blankEdit, setBlankEdit] = useState(null)   // index of the logged move whose blanks are being edited
   const [scoreEntry, setScoreEntry] = useState(null) // { index, value }: entering Crossplay's score for a logged move
   const [showLog, setShowLog] = useState(false)
   const [showUnseen, setShowUnseen] = useState(false)
@@ -127,6 +150,16 @@ export default function CrossplayHelper({ showHelp, resetRef }) {
 
   const lexicon = useMemo(getLexicon, [])
   const { board, results, totals } = useMemo(() => replay(game.moves), [game.moves])
+  // boardsBefore[i] = the board just before move i (for blank fixes and editing).
+  const boardsBefore = useMemo(() => {
+    const out = []
+    let b = emptyBoard()
+    for (const m of game.moves) {
+      out.push(b)
+      if (m.kind === 'play' && evaluatePlay(b, m).ok) b = applyPlay(b, m)
+    }
+    return out
+  }, [game.moves])
   const lastMoveTiles = useMemo(() => {
     const last = game.moves[game.moves.length - 1]
     if (!last || last.kind !== 'play') return null
@@ -183,7 +216,7 @@ export default function CrossplayHelper({ showHelp, resetRef }) {
     if (!draftEval?.ok) return
     if (draftEval.unknownWords.length && !confirmUnknown) { setConfirmUnknown(true); return }
     const move = { player, kind: 'play', ...draftPlay }
-    if (reported !== '' && !Number.isNaN(Number(reported))) move.reported = Number(reported)
+    if (reported !== '' && Number(reported) !== draftEval.score) move.reported = Number(reported)
     logMove(move, player === 'me' ? removeRackTiles(game.rack, tilesOf(draftEval.placed)) : undefined)
     stopEditing()
   }
@@ -191,13 +224,16 @@ export default function CrossplayHelper({ showHelp, resetRef }) {
   function playSuggestion(p) {
     const { row, col, dir, word } = p
     logMove({ player: 'me', kind: 'play', row, col, dir, word }, removeRackTiles(game.rack, p.tiles))
-    setScoreEntry({ index: game.moves.length, value: '' }) // offer to record Crossplay's score
+    setScoreEntry({ index: game.moves.length, value: String(p.score) }) // offer to record Crossplay's score
   }
 
   function saveScoreEntry() {
     if (!scoreEntry) return
-    const v = scoreEntry.value === '' ? null : Number(scoreEntry.value)
-    updateGame(g => withReportedScore(g, scoreEntry.index, v))
+    const app = results[scoreEntry.index]?.score
+    const v = Number(scoreEntry.value)
+    // Matching the app's score clears any earlier override; a different score is recorded.
+    updateGame(g => withReportedScore(g, scoreEntry.index, v === app ? null : v))
+    if (v != null && v !== results[scoreEntry.index]?.score) setShowLog(true) // show the ⚠ and any blank fix
     setScoreEntry(null)
   }
 
@@ -331,9 +367,10 @@ export default function CrossplayHelper({ showHelp, resetRef }) {
           {showHelp && (
             <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded p-2 space-y-1">
               <p><b>Log every move</b>, yours and your opponent's: tap the square where the word starts (tap it again to switch ▶ across / ▼ down), then type only the new letters — tiles already on the board are skipped. Press <b>?</b> before a letter to mark it as a blank.</p>
-              <p>Optionally enter the score Crossplay showed; if it differs from the app's score the move gets a ⚠ and the totals use Crossplay's number.</p>
+              <p>Optionally adjust the score with ▲▼ to what Crossplay showed (hold to repeat); if it differs from the app's score the move gets a ⚠ and the totals use Crossplay's number.</p>
               <p><b>Your rack</b>: tap it and type your tiles (<b>?</b> = blank). The best plays appear below, ranked by score plus how good the tiles you keep are. Tap one to preview it, then <b>Play</b> to log it — then type the tiles you drew.</p>
               <p>Positions: across plays are row-then-column (<b>8H</b>), down plays column-then-row (<b>H8</b>). Underlined letters are blanks.</p>
+              <p><b>Blanks:</b> in Crossplay a tile showing <b>0</b> is a blank. Forgot to mark one? Open <b>Moves</b> and tap the word to toggle its tiles, or use the suggested fix when Crossplay's score differs.</p>
             </div>
           )}
 
@@ -404,16 +441,14 @@ export default function CrossplayHelper({ showHelp, resetRef }) {
                 <p className="text-xs text-red-600">{draftPlay ? ERRORS[draftEval.error] : 'Tiles must be in one line.'}</p>
               )}
               <div className="flex items-center gap-1.5">
-                <label className="text-xs text-gray-500 flex items-center gap-1">
-                  Crossplay score
-                  <input value={reported} inputMode="numeric" placeholder="—"
-                    onChange={e => setReported(e.target.value.replace(/\D/g, ''))}
-                    className="w-12 h-7 px-1 border border-gray-300 rounded text-sm text-center" />
-                </label>
+                <span className="text-xs text-gray-500 leading-tight">Crossplay<br />score</span>
+                <ScoreStepper disabled={!draftEval?.ok} appScore={draftEval?.score}
+                  value={reported === '' ? draftEval?.score : Number(reported)}
+                  onStep={d => setReported(r => String(Math.max(0, (r === '' ? draftEval.score : Number(r)) + d)))} />
                 <button onClick={stopEditing} className="ml-auto px-3 h-7 rounded bg-gray-200 text-xs font-bold">Cancel</button>
                 <button onClick={logDraft} disabled={!draftEval?.ok}
                   className="px-3 h-7 rounded bg-wordle-green text-white text-xs font-bold disabled:opacity-40">
-                  Log {player === 'me' ? 'my' : `${game.name}'s`} move
+                  Log
                 </button>
               </div>
             </div>
@@ -427,10 +462,8 @@ export default function CrossplayHelper({ showHelp, resetRef }) {
                 {game.moves[scoreEntry.index].kind === 'play' ? <Word word={game.moves[scoreEntry.index].word} /> : game.moves[scoreEntry.index].kind}
                 {' '}(app: {results[scoreEntry.index]?.score})
               </span>
-              <input autoFocus value={scoreEntry.value} inputMode="numeric" placeholder="—"
-                onChange={e => setScoreEntry({ ...scoreEntry, value: e.target.value.replace(/\D/g, '') })}
-                onKeyDown={e => { if (e.key === 'Enter') saveScoreEntry(); if (e.key === 'Escape') setScoreEntry(null) }}
-                className="w-12 h-7 px-1 border border-gray-300 rounded text-sm text-center" />
+              <ScoreStepper value={Number(scoreEntry.value)} appScore={results[scoreEntry.index]?.score}
+                onStep={d => setScoreEntry(e => e && { ...e, value: String(Math.max(0, Number(e.value) + d)) })} />
               <button onClick={() => setScoreEntry(null)} className="ml-auto px-2 h-7 rounded bg-gray-200 font-bold">Skip</button>
               <button onClick={saveScoreEntry} className="px-2 h-7 rounded bg-wordle-green text-white font-bold">Save</button>
             </div>
@@ -484,20 +517,52 @@ export default function CrossplayHelper({ showHelp, resetRef }) {
                 {game.moves.map((m, i) => {
                   const r = results[i]
                   const who = m.player === 'me' ? 'You' : game.name
-                  return (
+                  const row = (
                     <li key={i} className={`flex gap-2 px-1 py-0.5 ${i % 2 ? 'bg-gray-50' : ''}`}>
                       <span className="w-5 text-gray-400">{i + 1}</span>
                       <span className="w-16 truncate">{who}</span>
                       {m.kind === 'play'
-                        ? <><Word word={m.word} /><span className="text-gray-500">{formatPlay(m)}</span></>
+                        ? <>
+                            <button title="Mark blanks" onClick={() => setBlankEdit(blankEdit === i ? null : i)}><Word word={m.word} /></button>
+                            <span className="text-gray-500">{formatPlay(m)}</span>
+                          </>
                         : <span className="italic text-gray-500">{m.kind}</span>}
                       {r.error && <span className="text-red-600">invalid: {ERRORS[r.error]}</span>}
                       {r.mismatch && <span className="text-amber-700">⚠ app {r.score}</span>}
                       <button className="ml-auto font-bold underline decoration-dotted"
                         title="Enter the score Crossplay showed"
-                        onClick={() => setScoreEntry({ index: i, value: m.reported != null ? String(m.reported) : '' })}>{r.counted}</button>
+                        onClick={() => setScoreEntry({ index: i, value: String(m.reported ?? r.score) })}>{r.counted}</button>
                     </li>
                   )
+                  const fixes = r.mismatch && m.kind === 'play' ? blankFixes(boardsBefore[i], m, m.reported).slice(0, 3) : []
+                  const editRow = blankEdit === i && m.kind === 'play' && (
+                    <li key={`${i}-blanks`} className="flex flex-wrap items-center gap-1 px-1 py-1 bg-amber-50">
+                      <span className="text-gray-500 mr-1">Tap a tile to mark it as a blank:</span>
+                      {[...m.word].map((ch, k) => {
+                        const [dr, dc] = m.dir === 'down' ? [1, 0] : [0, 1]
+                        const existing = boardsBefore[i][(m.row + dr * k) * SIZE + (m.col + dc * k)]
+                        const isBlank = ch !== ch.toUpperCase()
+                        return existing
+                          ? <span key={k} className="w-6 h-6 flex items-center justify-center rounded bg-gray-200 text-gray-400 font-bold">{ch.toUpperCase()}</span>
+                          : <button key={k}
+                              onClick={() => {
+                                const flipped = [...m.word].map((c, j) => (j === k ? (isBlank ? c.toUpperCase() : c.toLowerCase()) : c)).join('')
+                                updateGame(g => setMoveWord(g, i, flipped))
+                              }}
+                              className={`w-6 h-6 rounded font-bold ${isBlank ? 'border-2 border-dashed border-gray-400 text-gray-500 bg-white' : 'bg-[#3b67b8] text-white'}`}>
+                              {ch.toUpperCase()}
+                            </button>
+                      })}
+                      <button onClick={() => setBlankEdit(null)} className="ml-auto px-2 h-6 rounded bg-gray-200 font-bold">Done</button>
+                    </li>
+                  )
+                  return [row, editRow, ...fixes.map(f => (
+                    <li key={`${i}-fix-${f.word}`} className="flex items-center gap-2 px-1 py-1 bg-amber-50">
+                      <span className="text-amber-800">Crossplay's {m.reported} fits if {f.blanks.join(' and ')} {f.blanks.length > 1 ? 'were blanks' : 'was a blank'}.</span>
+                      <button onClick={() => updateGame(g => setMoveWord(g, i, f.word))}
+                        className="ml-auto px-2 h-6 rounded bg-wordle-green text-white font-bold">Fix</button>
+                    </li>
+                  ))]
                 })}
               </ol>
             )}

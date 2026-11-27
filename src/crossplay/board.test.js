@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { emptyBoard, evaluatePlay, playFromPlacement, applyPlay, replay, cellAt } from './board.js'
+import { emptyBoard, evaluatePlay, playFromPlacement, applyPlay, replay, cellAt, blankFixes } from './board.js'
 import { createLexicon } from './lexicon.js'
 import { formatPlay } from './notation.js'
 import { WORDS } from '../data/words.js'
@@ -86,4 +86,37 @@ test('swaps and passes score nothing', () => {
   ])
   expect(totals).toEqual({ me: 0, opp: 0 })
   expect(results.map(r => r.score)).toEqual([0, 0])
+})
+
+// Luke's QUERY (5F across) used a blank U: Crossplay scored it 44, a real U gives 46.
+const heronryQuery = [
+  { player: 'me', kind: 'play', row: 3, col: 7, dir: 'down', word: 'HERONRY' },
+  { player: 'opp', kind: 'play', row: 4, col: 5, dir: 'across', word: 'QUERY' },
+]
+
+test('QUERY with a real U scores 46; with a blank U, 44 (as Crossplay showed)', () => {
+  const { board } = replay(heronryQuery.slice(0, 1))
+  expect(replay(heronryQuery.slice(0, 1)).results[0].score).toBe(74)
+  expect(evaluatePlay(board, heronryQuery[1]).score).toBe(46)
+  expect(evaluatePlay(board, { ...heronryQuery[1], word: 'QuERY' }).score).toBe(44)
+})
+
+test('blankFixes finds which new tiles must be blanks to match the reported score', () => {
+  const { board } = replay(heronryQuery.slice(0, 1))
+  const fixes = blankFixes(board, heronryQuery[1], 44)
+  expect(fixes.map(f => f.word)).toContain('QuERY')
+  for (const f of fixes) expect(evaluatePlay(board, { ...heronryQuery[1], word: f.word }).score).toBe(44)
+  expect(fixes.find(f => f.word === 'QuERY').blanks).toEqual(['U'])
+  // Existing board tiles (the E) are never blanked by a fix.
+  expect(fixes.every(f => f.word[2] === 'E')).toBe(true)
+  expect(blankFixes(board, heronryQuery[1], 46)).toEqual([])
+  expect(blankFixes(board, heronryQuery[1], 7)).toEqual([])
+})
+
+test('blankFixes never uses more than the 3 blanks in the game', () => {
+  const { board } = replay([{ player: 'me', kind: 'play', row: 7, col: 5, dir: 'across', word: 'abc' }])
+  // Board already holds 3 blanks: no fix may add another.
+  const play = { row: 6, col: 5, dir: 'across', word: 'ZA' }
+  expect(evaluatePlay(board, play).ok).toBe(true)
+  expect(blankFixes(board, play, evaluatePlay(board, { ...play, word: 'zA' }).score)).toEqual([])
 })

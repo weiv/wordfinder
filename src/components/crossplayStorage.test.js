@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { newGame, loadGames, saveGames, undoLastMove, setReported, GAMES_KEY, ACTIVE_KEY } from './crossplayStorage.js'
+import { newGame, loadGames, saveGames, undoLastMove, setReported, setMoveWord, GAMES_KEY, ACTIVE_KEY } from './crossplayStorage.js'
 
 function memoryStorage(init = {}) {
   const data = { ...init }
@@ -79,4 +79,15 @@ test('setReported records, changes and clears the Crossplay score of a move', ()
   const b = setReported(a, 0, null)
   expect('reported' in b.moves[0]).toBe(false)
   expect(g.moves[0].reported).toBeUndefined() // original untouched
+})
+
+test('setMoveWord replaces the word of a logged play (e.g. marking a blank) and keeps other fields', () => {
+  const g = { ...newGame('Luke'), moves: [
+    { player: 'me', kind: 'play', row: 3, col: 7, dir: 'down', word: 'HERONRY' },
+    { player: 'opp', kind: 'play', row: 4, col: 5, dir: 'across', word: 'QUERY', reported: 44 },
+  ] }
+  const u = setMoveWord(g, 1, 'QuERY')
+  expect(u.moves[1]).toEqual({ player: 'opp', kind: 'play', row: 4, col: 5, dir: 'across', word: 'QuERY', reported: 44 })
+  expect(u.moves[0]).toBe(g.moves[0])
+  expect(g.moves[1].word).toBe('QUERY')
 })
