@@ -5,7 +5,9 @@
 //         line including tiles already on the board; a lowercase letter is a blank.
 // Move  = { player: 'me'|'opp', kind: 'play'|'swap'|'pass', ...Play, reported?: number }
 
-import { SIZE, CENTER, RACK_SIZE, SWEEP_BONUS, premiumAt, tileValue } from './rules.js'
+import { SIZE, CENTER, RACK_SIZE, SWEEP_BONUS, TILE_COUNTS, premiumAt, tileValue } from './rules.js'
+
+const BLANK_COUNT = TILE_COUNTS['?']
 
 const DELTA = { across: [0, 1], down: [1, 0] }
 const PERP = { across: 'down', down: 'across' }
@@ -193,4 +195,37 @@ export function replay(moves) {
     return result
   })
   return { board, results, totals }
+}
+
+// Which of a play's new tiles must be blanks for it to score `reported`?
+// Tries every way of flipping one or two new tiles between real and blank, keeping
+// within the game's 3 blanks. Returns [{ word, blanks: letters newly marked blank }].
+export function blankFixes(board, play, reported) {
+  const base = evaluatePlay(board, play)
+  if (!base.ok || base.score === reported) return []
+  const [dr, dc] = DELTA[play.dir]
+  const newIdx = []
+  for (let i = 0; i < play.word.length; i++) {
+    if (!cellAt(board, play.row + dr * i, play.col + dc * i)) newIdx.push(i)
+  }
+  const boardBlanks = board.filter(c => c && c.blank).length
+  const flip = ch => (ch === ch.toUpperCase() ? ch.toLowerCase() : ch.toUpperCase())
+  const subsets = []
+  for (let a = 0; a < newIdx.length; a++) {
+    subsets.push([newIdx[a]])
+    for (let b = a + 1; b < newIdx.length; b++) subsets.push([newIdx[a], newIdx[b]])
+  }
+  const fixes = []
+  for (const s of subsets) {
+    const chars = [...play.word]
+    for (const i of s) chars[i] = flip(chars[i])
+    const word = chars.join('')
+    const blanksUsed = newIdx.filter(i => word[i] !== word[i].toUpperCase()).length
+    if (boardBlanks + blanksUsed > BLANK_COUNT) continue
+    const r = evaluatePlay(board, { ...play, word })
+    if (r.ok && r.score === reported) {
+      fixes.push({ word, blanks: s.filter(i => word[i] !== word[i].toUpperCase()).map(i => word[i].toUpperCase()) })
+    }
+  }
+  return fixes
 }

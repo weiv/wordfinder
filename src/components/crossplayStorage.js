@@ -69,3 +69,8 @@ export function setReported(game, index, value) {
   })
   return { ...game, moves }
 }
+
+// Replace the word of logged play `index` — used to mark or unmark blanks after the fact.
+export function setMoveWord(game, index, word) {
+  return { ...game, moves: game.moves.map((m, i) => (i === index ? { ...m, word } : m)) }
+}
