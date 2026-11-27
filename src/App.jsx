@@ -1,10 +1,13 @@
 import { useState, useRef } from 'react'
 import WordleHelper from './components/WordleHelper'
-import CrosswordHelper from './components/CrosswordHelper'
+import CrossplayHelper from './components/CrossplayHelper'
 import LettersHelper from './components/LettersHelper'
 
 export default function App() {
-  const [mode, setMode] = useState(() => localStorage.getItem('mode') || 'wordle')
+  const [mode, setMode] = useState(() => {
+    const m = localStorage.getItem('mode') || 'wordle'
+    return m === 'crossword' ? 'crossplay' : m // the Crossword tab became Crossplay
+  })
   const [showHelp, setShowHelp] = useState(false)
   const resetRef = useRef(() => {})
 
@@ -16,7 +19,7 @@ export default function App() {
 
   const tabs = [
     { key: 'wordle', label: 'Wordle' },
-    { key: 'crossword', label: 'Crossword' },
+    { key: 'crossplay', label: 'Crossplay' },
     { key: 'letters', label: 'Letters' },
   ]
 
@@ -27,7 +30,7 @@ export default function App() {
       <main className={`flex-1 overflow-y-auto pt-10 ${mode === 'wordle' ? 'pb-[60vh]' : ''}`}>
         <div className="max-w-lg mx-auto px-4 py-4">
           {mode === 'wordle' && <WordleHelper {...helperProps} />}
-          {mode === 'crossword' && <CrosswordHelper {...helperProps} />}
+          {mode === 'crossplay' && <CrossplayHelper {...helperProps} />}
           {mode === 'letters' && <LettersHelper {...helperProps} />}
         </div>
       </main>
